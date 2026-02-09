@@ -204,15 +204,6 @@ export const crew: CrewMember[] = [
     disponibile: true,
   },
   {
-    id: "official-content-creator",
-    ruolo: "OFFICIAL CONTENT CREATOR",
-    ruoloLabel: "Content Creator Ufficiale",
-    nome: "Coming Soon",
-    descrizione:
-      "Reels, TikTok, stories e contenuti social in tempo reale. La voce digitale del Tour su tutte le piattaforme.",
-    disponibile: true,
-  },
-  {
     id: "official-dj",
     ruolo: "OFFICIAL DJ",
     ruoloLabel: "DJ Ufficiale",
