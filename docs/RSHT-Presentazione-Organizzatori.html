@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Romagna Summer Hoops Tour - Presentazione Organizzatori</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', Arial, sans-serif;
+      color: #1a1a1a;
+      background: #fff;
+      font-size: 11pt;
+      line-height: 1.5;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 20mm 22mm;
+      page-break-after: always;
+      position: relative;
+    }
+
+    .page:last-child { page-break-after: auto; }
+
+    /* Header bar */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 3px solid #FF6B35;
+      padding-bottom: 12px;
+      margin-bottom: 24px;
+    }
+
+    .header-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22pt;
+      letter-spacing: 2px;
+      color: #FF6B35;
+    }
+
+    .header-sub {
+      font-size: 9pt;
+      color: #666;
+      text-align: right;
+    }
+
+    .header-sub strong { color: #1a1a1a; }
+
+    /* Section titles */
+    h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 16pt;
+      letter-spacing: 1.5px;
+      color: #FF6B35;
+      margin-top: 20px;
+      margin-bottom: 8px;
+      border-left: 4px solid #FF6B35;
+      padding-left: 10px;
+    }
+
+    h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 12pt;
+      letter-spacing: 1px;
+      color: #1a1a1a;
+      margin-top: 14px;
+      margin-bottom: 6px;
+    }
+
+    p { margin-bottom: 8px; color: #333; }
+
+    .intro {
+      font-size: 11.5pt;
+      color: #1a1a1a;
+      font-weight: 500;
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+
+    /* Points table */
+    .points-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0 14px 0;
+      font-size: 10pt;
+    }
+
+    .points-table th {
+      background: #FF6B35;
+      color: #fff;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 11pt;
+      letter-spacing: 1px;
+      padding: 6px 12px;
+      text-align: left;
+    }
+
+    .points-table td {
+      padding: 5px 12px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .points-table tr:nth-child(even) { background: #f9f9f9; }
+
+    .points-table .pts {
+      font-weight: 700;
+      color: #FF6B35;
+      text-align: center;
+    }
+
+    /* Info grid */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 10px 0 14px 0;
+    }
+
+    .info-box {
+      background: #f5f5f5;
+      border-radius: 6px;
+      padding: 8px 12px;
+      border-left: 3px solid #FF6B35;
+    }
+
+    .info-box .label {
+      font-size: 8pt;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #999;
+      margin-bottom: 2px;
+    }
+
+    .info-box .value {
+      font-weight: 600;
+      color: #1a1a1a;
+      font-size: 10pt;
+    }
+
+    /* Bullet list */
+    ul {
+      margin: 6px 0 12px 18px;
+      color: #333;
+    }
+
+    ul li { margin-bottom: 4px; }
+
+    ul li strong { color: #1a1a1a; }
+
+    /* Benefits */
+    .benefit {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .benefit-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20pt;
+      color: #FF6B35;
+      line-height: 1;
+      min-width: 30px;
+    }
+
+    .benefit-text h4 {
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: #1a1a1a;
+      margin-bottom: 2px;
+    }
+
+    .benefit-text p {
+      font-size: 10pt;
+      color: #555;
+      margin-bottom: 0;
+      line-height: 1.4;
+    }
+
+    /* Footer */
+    .page-footer {
+      position: absolute;
+      bottom: 15mm;
+      left: 22mm;
+      right: 22mm;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #ddd;
+      padding-top: 8px;
+      font-size: 8pt;
+      color: #999;
+    }
+
+    .draft-badge {
+      display: inline-block;
+      background: #FF6B35;
+      color: #fff;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 9pt;
+      letter-spacing: 1px;
+      padding: 2px 10px;
+      border-radius: 3px;
+    }
+
+    /* Highlight box */
+    .highlight-box {
+      background: linear-gradient(135deg, #FFF5F0, #FFF9F5);
+      border: 1px solid #FF6B35;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin: 16px 0;
+    }
+
+    .highlight-box p {
+      color: #1a1a1a;
+      font-weight: 500;
+      margin-bottom: 0;
+      font-size: 10.5pt;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .page {
+        margin: 0;
+        padding: 15mm 20mm;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ======================== PAGE 1: RULES & STRUCTURE ======================== -->
+  <div class="page">
+    <div class="header">
+      <div class="header-title">ROMAGNA SUMMER HOOPS TOUR</div>
+      <div class="header-sub">
+        <strong>Presentazione Organizzatori</strong><br>
+        Stagione 2026 - <span class="draft-badge">DRAFT</span>
+      </div>
+    </div>
+
+    <p class="intro">
+      Il Romagna Summer Hoops Tour e' il primo circuito estivo di basket 3x3 in Romagna.
+      Non e' un singolo torneo, ma un progetto condiviso che crea una rete tra organizzatori, squadre
+      e community, costruendo un'esperienza estiva unica dedicata allo streetbasket.
+    </p>
+
+    <h2>AMBITO E DURATA</h2>
+    <div class="info-grid">
+      <div class="info-box">
+        <div class="label">Area Geografica</div>
+        <div class="value">Romagna</div>
+      </div>
+      <div class="info-box">
+        <div class="label">Province</div>
+        <div class="value">Forli-Cesena, Rimini, Ravenna</div>
+      </div>
+      <div class="info-box">
+        <div class="label">Periodo</div>
+        <div class="value">Maggio - Settembre</div>
+      </div>
+      <div class="info-box">
+        <div class="label">Numero Tappe</div>
+        <div class="value">6 - 12 tappe</div>
+      </div>
+    </div>
+
+    <h2>COME FUNZIONA</h2>
+    <p>
+      Tornei 3x3 gia' esistenti diventano <strong>tappe ufficiali</strong> del Tour. Ogni tappa e' organizzata
+      in piena autonomia: mantieni il tuo nome, il tuo format e la tua gestione operativa.
+      Il Tour fornisce una struttura comune che collega tutte le tappe attraverso una classifica
+      generale, un sistema di punteggio condiviso e una narrazione unica della stagione.
+    </p>
+
+    <h2>SISTEMA DI PUNTEGGIO</h2>
+    <table class="points-table">
+      <tr><th>Piazzamento</th><th>Punti</th></tr>
+      <tr><td>1° posto</td><td class="pts">100</td></tr>
+      <tr><td>2° posto</td><td class="pts">80</td></tr>
+      <tr><td>3° posto</td><td class="pts">65</td></tr>
+      <tr><td>4° posto</td><td class="pts">55</td></tr>
+      <tr><td>5° - 8° posto</td><td class="pts">45</td></tr>
+      <tr><td>9° - 16° posto</td><td class="pts">30</td></tr>
+      <tr><td>Eliminati ai gironi</td><td class="pts">20</td></tr>
+    </table>
+    <p><strong>Bonus Costanza:</strong> +5 punti per ogni tappa disputata dopo la prima.</p>
+
+    <h2>IDENTITA' SQUADRE</h2>
+    <ul>
+      <li>Le squadre si iscrivono ai <strong>singoli tornei</strong>, non al Tour</li>
+      <li>Per mantenere l'identita': stesso nome + almeno 2 giocatori gia' utilizzati</li>
+      <li>Massimo <strong>8 giocatori</strong> per squadra durante l'intero Tour</li>
+      <li>Minimo <strong>2 tappe</strong> per qualificarsi a The Finals</li>
+    </ul>
+
+    <h2>THE FINALS</h2>
+    <p>
+      L'evento finale che incorona i campioni dell'estate. Le <strong>top 16 squadre</strong> della classifica
+      generale si sfidano in una giornata intera: 4 gironi da 4, quarti, semifinali e finale.
+      Regolamento FIBA 3x3 ufficiale. Finalissima senza limite di tempo.
+      Location: stabilimento balneare con musica, food e street culture.
+    </p>
+
+    <div class="page-footer">
+      <span>Romagna Summer Hoops Tour - Stagione 2026</span>
+      <span>Pagina 1 di 2</span>
+    </div>
+  </div>
+
+  <!-- ======================== PAGE 2: BENEFITS FOR ORGANIZERS ======================== -->
+  <div class="page">
+    <div class="header">
+      <div class="header-title">PERCHE' DIVENTARE UNA TAPPA?</div>
+      <div class="header-sub">
+        <strong>Vantaggi per gli Organizzatori</strong><br>
+        Stagione 2026 - <span class="draft-badge">DRAFT</span>
+      </div>
+    </div>
+
+    <p class="intro">
+      Entrare nel Romagna Summer Hoops Tour significa far parte di un circuito che amplifica
+      il tuo torneo senza toglierti nulla. Ecco cosa ci guadagni.
+    </p>
+
+    <div class="benefit">
+      <div class="benefit-num">01</div>
+      <div class="benefit-text">
+        <h4>Autonomia Totale</h4>
+        <p>Mantieni il tuo nome, il tuo format e la tua gestione operativa. Il Tour non interferisce con la tua organizzazione.</p>
+      </div>
+    </div>
+
+    <div class="benefit">
+      <div class="benefit-num">02</div>
+      <div class="benefit-text">
+        <h4>Piu' Visibilita'</h4>
+        <p>Il tuo torneo viene promosso sui canali social del Tour, sul sito web ufficiale e attraverso la rete di cross-promozione tra tutte le tappe.</p>
+      </div>
+    </div>
+
+    <div class="benefit">
+      <div class="benefit-num">03</div>
+      <div class="benefit-text">
+        <h4>Piu' Squadre</h4>
+        <p>Il formato a circuito incentiva le squadre a partecipare a piu' tappe possibili per accumulare punti. Piu' tappe = piu' iscritti al tuo torneo.</p>
+      </div>
+    </div>
+
+    <div class="benefit">
+      <div class="benefit-num">04</div>
+      <div class="benefit-text">
+        <h4>Accesso alla RSHT Crew</h4>
+        <p>Fotografo, videomaker, DJ, speaker e altri professionisti ufficiali del Tour disponibili per la tua tappa a tariffe dedicate.</p>
+      </div>
+    </div>
+
+    <div class="benefit">
+      <div class="benefit-num">05</div>
+      <div class="benefit-text">
+        <h4>Parte di una Storia</h4>
+        <p>Il Tour crea una narrazione che dura tutta l'estate. Il tuo torneo diventa un capitolo di un racconto piu' grande che coinvolge tutta la Romagna.</p>
+      </div>
+    </div>
+
+    <div class="benefit">
+      <div class="benefit-num">06</div>
+      <div class="benefit-text">
+        <h4>Associazione con The Finals</h4>
+        <p>Il tuo nome e' legato all'evento finale dell'estate: prestigio, branding e una community che cresce insieme.</p>
+      </div>
+    </div>
+
+    <div class="benefit">
+      <div class="benefit-num">07</div>
+      <div class="benefit-text">
+        <h4>Zero Costi di Adesione</h4>
+        <p>Non ci sono quote da pagare per diventare una tappa ufficiale. Il Tour si sostiene attraverso sponsor e la Crew.</p>
+      </div>
+    </div>
+
+    <div class="benefit">
+      <div class="benefit-num">08</div>
+      <div class="benefit-text">
+        <h4>Supporto Comunicazione</h4>
+        <p>Hashtag ufficiali, classifica condivisa, branding unificato e materiali grafici a disposizione per promuovere la tua tappa.</p>
+      </div>
+    </div>
+
+    <div class="highlight-box">
+      <p>
+        Vuoi far diventare il tuo torneo una tappa ufficiale? Contattaci a
+        <strong>info@romagnahoopstour.it</strong> o visita <strong>romagnahoopstour.it/contatti</strong>
+      </p>
+    </div>
+
+    <div class="page-footer">
+      <span>Romagna Summer Hoops Tour - Stagione 2026</span>
+      <span>Pagina 2 di 2</span>
+    </div>
+  </div>
+
+</body>
+</html>

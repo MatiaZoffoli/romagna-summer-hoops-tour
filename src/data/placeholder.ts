@@ -172,6 +172,111 @@ export const news: NewsItem[] = [
   },
 ];
 
+// ------ RSHT CREW ------
+export interface CrewMember {
+  id: string;
+  ruolo: string;
+  ruoloLabel: string;
+  nome: string;
+  descrizione: string;
+  instagram?: string;
+  contatto?: string;
+  disponibile: boolean;
+}
+
+export const crew: CrewMember[] = [
+  {
+    id: "official-photographer",
+    ruolo: "OFFICIAL PHOTOGRAPHER",
+    ruoloLabel: "Fotografo Ufficiale",
+    nome: "Coming Soon",
+    descrizione:
+      "Copre ogni tappa del Tour con scatti professionali. Contenuti per social, sito web e archivio visivo della stagione.",
+    disponibile: true,
+  },
+  {
+    id: "official-videographer",
+    ruolo: "OFFICIAL VIDEOGRAPHER",
+    ruoloLabel: "Videomaker Ufficiale",
+    nome: "Coming Soon",
+    descrizione:
+      "Highlight reel, recap video e produzioni professionali per immortalare i momenti migliori di ogni tappa.",
+    disponibile: true,
+  },
+  {
+    id: "official-content-creator",
+    ruolo: "OFFICIAL CONTENT CREATOR",
+    ruoloLabel: "Content Creator Ufficiale",
+    nome: "Coming Soon",
+    descrizione:
+      "Reels, TikTok, stories e contenuti social in tempo reale. La voce digitale del Tour su tutte le piattaforme.",
+    disponibile: true,
+  },
+  {
+    id: "official-dj",
+    ruolo: "OFFICIAL DJ",
+    ruoloLabel: "DJ Ufficiale",
+    nome: "Coming Soon",
+    descrizione:
+      "La colonna sonora del Tour. Hip-hop, vibes estive e set live che accendono l'atmosfera ad ogni tappa.",
+    disponibile: true,
+  },
+  {
+    id: "official-voice",
+    ruolo: "OFFICIAL VOICE",
+    ruoloLabel: "Commentatore Ufficiale",
+    nome: "Coming Soon",
+    descrizione:
+      "La voce ufficiale del Romagna Summer Hoops Tour. Commento live delle partite, presentazioni e intrattenimento.",
+    disponibile: true,
+  },
+  {
+    id: "official-after-party",
+    ruolo: "OFFICIAL AFTER-PARTY",
+    ruoloLabel: "After-Party Ufficiale",
+    nome: "Coming Soon",
+    descrizione:
+      "Organizzazione dell'after-party ufficiale del Tour. Perche' il basket non finisce con l'ultimo canestro.",
+    disponibile: true,
+  },
+  {
+    id: "official-graphic-designer",
+    ruolo: "OFFICIAL GRAPHIC DESIGNER",
+    ruoloLabel: "Graphic Designer Ufficiale",
+    nome: "Coming Soon",
+    descrizione:
+      "Locandine, grafiche social, branding e materiali visivi per le tappe e per il Tour.",
+    disponibile: true,
+  },
+  {
+    id: "official-food-truck",
+    ruolo: "OFFICIAL FOOD TRUCK",
+    ruoloLabel: "Food Truck Ufficiale",
+    nome: "Coming Soon",
+    descrizione:
+      "Il gusto ufficiale del Tour. Street food di qualita' presente alle tappe e protagonista a The Finals.",
+    disponibile: true,
+  },
+  {
+    id: "official-streetwear",
+    ruolo: "OFFICIAL STREETWEAR BRAND",
+    ruoloLabel: "Streetwear Ufficiale",
+    nome: "Coming Soon",
+    descrizione:
+      "Il brand streetwear del Tour. Merch, custom jerseys e limited edition per vestire la community.",
+    disponibile: true,
+  },
+  {
+    id: "official-physio",
+    ruolo: "OFFICIAL PHYSIO",
+    ruoloLabel: "Fisioterapista Ufficiale",
+    nome: "Coming Soon",
+    descrizione:
+      "Warm-up, prevenzione infortuni e assistenza atletica per garantire sicurezza e performance ad ogni tappa.",
+    disponibile: true,
+  },
+];
+
 // ------ POINT SYSTEM ------
 export const sistemaPunteggio = [
   { posizione: "1° posto", punti: 100 },
