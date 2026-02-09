@@ -1,0 +1,83 @@
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import { LogIn, Eye, EyeOff } from "lucide-react";
+
+export default function LoginPage() {
+  const [showPassword, setShowPassword] = useState(false);
+
+  return (
+    <div className="pt-24 pb-20 min-h-screen flex items-center justify-center">
+      <div className="w-full max-w-md mx-auto px-4">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <span className="text-4xl mb-4 block">🏀</span>
+          <h1 className="font-[family-name:var(--font-bebas)] text-4xl tracking-wider mb-2">
+            ACCEDI
+          </h1>
+          <p className="text-muted text-sm">
+            Accedi al profilo della tua squadra
+          </p>
+        </div>
+
+        {/* Form */}
+        <div className="p-8 bg-surface rounded-2xl border border-border">
+          <form className="space-y-5">
+            <div>
+              <label className="block text-sm text-muted mb-2">Email</label>
+              <input
+                type="email"
+                placeholder="team@email.com"
+                className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground placeholder:text-muted/40 focus:outline-none focus:border-primary transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-muted mb-2">Password</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground placeholder:text-muted/40 focus:outline-none focus:border-primary transition-colors pr-12"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-foreground transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full px-6 py-3 bg-primary text-white font-bold rounded-full hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
+            >
+              <LogIn size={18} />
+              Accedi
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-muted">
+              Non hai un account?{" "}
+              <Link
+                href="/registrazione"
+                className="text-primary hover:text-gold transition-colors font-medium"
+              >
+                Registra la tua squadra
+              </Link>
+            </p>
+          </div>
+        </div>
+
+        {/* Info */}
+        <p className="text-xs text-muted/60 text-center mt-6">
+          L&apos;accesso è riservato ai rappresentanti delle squadre registrate al Tour.
+        </p>
+      </div>
+    </div>
+  );
+}
