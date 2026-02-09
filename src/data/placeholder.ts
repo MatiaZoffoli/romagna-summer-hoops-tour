@@ -283,7 +283,7 @@ export const sistemaPunteggio = [
   { posizione: "2° posto", punti: 80 },
   { posizione: "3° posto", punti: 65 },
   { posizione: "4° posto", punti: 55 },
-  { posizione: "5°-8° posto", punti: 45 },
-  { posizione: "9°-16° posto", punti: 30 },
+  { posizione: "Eliminati ai Quarti", punti: 45 },
+  { posizione: "Eliminati agli Ottavi", punti: 30 },
   { posizione: "Eliminati ai gironi", punti: 20 },
 ];

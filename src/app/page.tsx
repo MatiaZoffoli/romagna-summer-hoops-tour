@@ -86,7 +86,7 @@ export default function Home() {
           {[
             { label: "Tappe", value: `${tappe.length}+`, icon: MapPin },
             { label: "Province", value: "3", icon: MapPin },
-            { label: "Mesi di Gare", value: "Mag–Set", icon: Calendar },
+            { label: "Mesi di Gare", value: "Maggio - Settembre", icon: Calendar },
             { label: "Squadre Iscritte", value: `${squadre.length}+`, icon: Users },
           ].map((stat) => (
             <div key={stat.label} className="flex flex-col items-center gap-1">

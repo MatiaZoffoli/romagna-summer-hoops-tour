@@ -66,7 +66,7 @@ export default function IlTourPage() {
               { label: "Area Geografica", value: "Romagna" },
               { label: "Province", value: "Forlì-Cesena, Rimini, Ravenna" },
               { label: "Periodo", value: "Maggio - Settembre" },
-              { label: "Numero Tappe", value: "6 – 12 tappe" },
+              { label: "Numero Tappe", value: "6+" },
             ].map((item) => (
               <div
                 key={item.label}
