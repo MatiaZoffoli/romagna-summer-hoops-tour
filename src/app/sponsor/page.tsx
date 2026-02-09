@@ -124,9 +124,11 @@ export default function SponsorPage() {
               VUOI FAR PARTE DELLA CREW?
             </h3>
             <p className="text-muted text-sm max-w-lg mx-auto mb-4">
-              Sei un professionista e vuoi entrare nel circuito? Offri il tuo servizio alle
-              tappe del Tour e sarai protagonista a The Finals. Nessun costo per te - solo
-              visibilita&apos; e opportunita&apos;.
+              Sei un professionista e vuoi entrare nel circuito?
+              <br />
+              Offri il tuo servizio alle tappe del Tour e sarai protagonista a The Finals.
+              <br />
+              Nessun costo per te - solo visibilita&apos; e opportunita&apos;.
             </p>
             <a
               href="mailto:crew@romagnahoopstour.it"
