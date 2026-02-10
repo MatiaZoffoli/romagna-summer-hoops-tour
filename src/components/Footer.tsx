@@ -62,22 +62,22 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="mailto:info@romagnahoopstour.it"
+                  href="mailto:romagnasummerhoopstour@gmail.com"
                   className="flex items-center gap-2 text-muted hover:text-primary transition-colors"
                 >
                   <Mail size={16} className="text-primary shrink-0" />
-                  info@romagnahoopstour.it
+                  romagnasummerhoopstour@gmail.com
                 </a>
               </li>
               <li>
                 <a
-                  href="https://instagram.com/romagnahoopstour"
+                  href="https://instagram.com/romagnasummerhoopstour"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-muted hover:text-primary transition-colors"
                 >
                   <Instagram size={16} className="text-primary shrink-0" />
-                  @romagnahoopstour
+                  @romagnasummerhoopstour
                 </a>
               </li>
             </ul>

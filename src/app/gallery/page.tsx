@@ -41,13 +41,13 @@ export default async function GalleryPage() {
                 Segui la pagina ufficiale del Tour per highlights, recap e contenuti esclusivi di ogni tappa.
               </p>
               <a
-                href="https://instagram.com/romagnahoopstour"
+                href="https://instagram.com/romagnasummerhoopstour"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-pink-500 to-orange-500 text-white font-bold rounded-full hover:opacity-90 transition-opacity"
               >
                 <Instagram size={18} />
-                @romagnahoopstour
+                @romagnasummerhoopstour
                 <ExternalLink size={14} />
               </a>
             </div>

@@ -37,7 +37,7 @@ export default function PrivacyPage() {
               Il titolare del trattamento dei dati personali e&apos; il Romagna Summer Hoops Tour
               (di seguito &quot;RSHT&quot; o &quot;il Tour&quot;).
               Per qualsiasi informazione relativa al trattamento dei dati personali e&apos; possibile
-              contattarci all&apos;indirizzo email: info@romagnahoopstour.it
+              contattarci all&apos;indirizzo email: romagnasummerhoopstour@gmail.com
             </p>
           </section>
 
@@ -157,8 +157,8 @@ export default function PrivacyPage() {
             <p className="text-muted leading-relaxed text-sm">
               Per esercitare i propri diritti o per qualsiasi domanda relativa alla privacy,
               contattare:{" "}
-              <a href="mailto:info@romagnahoopstour.it" className="text-primary hover:text-gold transition-colors">
-                info@romagnahoopstour.it
+              <a href="mailto:romagnasummerhoopstour@gmail.com" className="text-primary hover:text-gold transition-colors">
+                romagnasummerhoopstour@gmail.com
               </a>
             </p>
           </section>

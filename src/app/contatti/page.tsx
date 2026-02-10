@@ -27,7 +27,7 @@ export default function ContattiPage() {
 
             <div className="space-y-4">
               <a
-                href="mailto:info@romagnahoopstour.it"
+                href="mailto:romagnasummerhoopstour@gmail.com"
                 className="flex items-center gap-4 p-4 bg-surface rounded-xl border border-border hover:border-primary/40 transition-colors group"
               >
                 <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
@@ -36,13 +36,13 @@ export default function ContattiPage() {
                 <div>
                   <p className="text-sm text-muted">Email</p>
                   <p className="font-medium text-foreground group-hover:text-primary transition-colors">
-                    info@romagnahoopstour.it
+                    romagnasummerhoopstour@gmail.com
                   </p>
                 </div>
               </a>
 
               <a
-                href="https://instagram.com/romagnahoopstour"
+                href="https://instagram.com/romagnasummerhoopstour"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-4 p-4 bg-surface rounded-xl border border-border hover:border-pink-400/40 transition-colors group"
@@ -53,7 +53,7 @@ export default function ContattiPage() {
                 <div>
                   <p className="text-sm text-muted">Instagram</p>
                   <p className="font-medium text-foreground group-hover:text-pink-400 transition-colors">
-                    @romagnahoopstour
+                    @romagnasummerhoopstour
                   </p>
                 </div>
               </a>

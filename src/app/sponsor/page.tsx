@@ -131,7 +131,7 @@ export default function SponsorPage() {
               Nessun costo per te - solo visibilita&apos; e opportunita&apos;.
             </p>
             <a
-              href="mailto:crew@romagnahoopstour.it"
+              href="mailto:romagnasummerhoopstour@gmail.com"
               className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white font-bold rounded-full hover:bg-primary-dark transition-colors"
             >
               <Mail size={18} />
@@ -218,7 +218,7 @@ export default function SponsorPage() {
             nella Riviera Romagnola. Visibilita&apos; su tutti i canali e a ogni tappa del Tour.
           </p>
           <a
-            href="mailto:sponsor@romagnahoopstour.it"
+            href="mailto:romagnasummerhoopstour@gmail.com"
             className="inline-flex items-center gap-2 px-8 py-4 bg-primary text-white font-bold rounded-full hover:bg-primary-dark transition-colors text-lg"
           >
             <Mail size={20} />
