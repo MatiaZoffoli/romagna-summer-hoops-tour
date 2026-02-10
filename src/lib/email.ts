@@ -2,7 +2,7 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const ADMIN_EMAIL = "romagnasummerhoopstour@gmail.com";
+const ADMIN_EMAIL = "matiazoffoli@gmail.com"; // Verified email for Resend free tier
 const FROM_EMAIL = "Romagna Summer Hoops Tour <onboarding@resend.dev>"; // Using Resend's default domain for now
 
 export async function sendEmail({
