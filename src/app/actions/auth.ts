@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
 interface GiocatoreInput {
@@ -58,7 +58,17 @@ export async function signup(formData: FormData) {
   }
 
   // 2. Create team
-  const { data: squadra, error: squadraError } = await supabase
+  // Use service role client to bypass RLS during signup (session may not be available yet)
+  let serviceRoleClient;
+  try {
+    serviceRoleClient = createServiceRoleClient();
+  } catch (error) {
+    // If service role key is not available, try with regular client
+    // (this might work if session is available)
+    serviceRoleClient = supabase;
+  }
+
+  const { data: squadra, error: squadraError } = await serviceRoleClient
     .from("squadre")
     .insert({
       auth_user_id: authData.user.id,
@@ -87,7 +97,7 @@ export async function signup(formData: FormData) {
     }));
 
   if (giocatoriData.length > 0) {
-    const { error: giocatoriError } = await supabase
+    const { error: giocatoriError } = await serviceRoleClient
       .from("giocatori")
       .insert(giocatoriData);
 
