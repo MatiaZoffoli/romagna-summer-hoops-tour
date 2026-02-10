@@ -49,6 +49,22 @@ export async function notifyAdminNewApplication(application: {
   provincia: string | null;
   descrizione: string | null;
 }) {
+  // Format date from YYYY-MM-DD to readable format
+  let formattedDate = application.data_proposta;
+  try {
+    const date = new Date(application.data_proposta);
+    if (!isNaN(date.getTime())) {
+      formattedDate = date.toLocaleDateString('it-IT', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    }
+  } catch (e) {
+    // Keep original format if parsing fails
+  }
+
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #ff6b35;">Nuova Candidatura Tappa</h2>
@@ -62,7 +78,7 @@ export async function notifyAdminNewApplication(application: {
         <p><strong>Email:</strong> ${application.email_organizzatore}</p>
         ${application.telefono_organizzatore ? `<p><strong>Telefono:</strong> ${application.telefono_organizzatore}</p>` : ""}
         
-        <p><strong>Data proposta:</strong> ${application.data_proposta} · ${application.orario_proposto}</p>
+        <p><strong>Data proposta:</strong> ${formattedDate} · ${application.orario_proposto}</p>
         <p><strong>Luogo:</strong> ${application.luogo}${application.provincia ? ` (${application.provincia})` : ""}</p>
         
         ${application.descrizione ? `<p><strong>Descrizione:</strong><br>${application.descrizione.replace(/\n/g, "<br>")}</p>` : ""}

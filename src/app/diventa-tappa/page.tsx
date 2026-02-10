@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowLeft, MapPin, Calendar, Clock, User, Mail, Phone, Instagram, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Clock, User, Mail, Phone, Instagram, CheckCircle, Loader2, X } from "lucide-react";
 import { submitTappaApplication } from "@/app/actions/tappa-application";
 
 export default function DiventaTappaPage() {
@@ -23,11 +23,8 @@ export default function DiventaTappaPage() {
       setLoading(false);
     } else {
       setSuccess(true);
+      setLoading(false);
       (e.target as HTMLFormElement).reset();
-      setTimeout(() => {
-        setSuccess(false);
-        setLoading(false);
-      }, 5000);
     }
   }
 
@@ -80,15 +77,41 @@ export default function DiventaTappaPage() {
           </div>
         </div>
 
+        {/* Success Modal */}
+        {success && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-surface rounded-2xl border border-border max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                    <CheckCircle size={24} className="text-green-400" />
+                  </div>
+                  <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider">
+                    Domanda Inviata!
+                  </h2>
+                </div>
+                <button
+                  onClick={() => setSuccess(false)}
+                  className="p-2 hover:bg-background rounded-lg transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <p className="text-muted mb-6">
+                La tua candidatura è stata inviata con successo. Ti contatteremo via email entro pochi giorni lavorativi.
+              </p>
+              <button
+                onClick={() => setSuccess(false)}
+                className="w-full px-6 py-3 bg-primary text-white font-bold rounded-full hover:bg-primary-dark transition-colors"
+              >
+                Chiudi
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-8">
-          {success && (
-            <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm flex items-center gap-2">
-              <CheckCircle size={16} />
-              Domanda inviata con successo! Ti contatteremo presto.
-            </div>
-          )}
-
           {error && (
             <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
               {error}
@@ -159,6 +182,12 @@ export default function DiventaTappaPage() {
                     required
                     placeholder="Es: KOTG"
                     className={inputClass}
+                    onChange={(e) => {
+                      const nomeCompletoInput = e.currentTarget.form?.querySelector('[name="nomeCompletoTorneo"]') as HTMLInputElement;
+                      if (nomeCompletoInput && e.target.value) {
+                        nomeCompletoInput.value = `${e.target.value} - Tappa Ufficiale RSHT`;
+                      }
+                    }}
                   />
                 </div>
                 <div>
@@ -166,7 +195,7 @@ export default function DiventaTappaPage() {
                   <input
                     name="nomeCompletoTorneo"
                     type="text"
-                    placeholder="Es: Kings of the Ghetto - Tappa ufficiale..."
+                    placeholder="Es: Kings of the Ghetto - Tappa Ufficiale RSHT"
                     className={inputClass}
                   />
                 </div>
@@ -177,9 +206,9 @@ export default function DiventaTappaPage() {
                   <label className="block text-sm text-muted mb-2">Data *</label>
                   <input
                     name="dataProposta"
-                    type="text"
+                    type="date"
                     required
-                    placeholder="Es: Sabato 11 Luglio 2026"
+                    min={new Date().toISOString().split('T')[0]}
                     className={inputClass}
                   />
                 </div>
@@ -285,7 +314,7 @@ export default function DiventaTappaPage() {
           {/* Submit */}
           <button
             type="submit"
-            disabled={loading || success}
+            disabled={loading}
             className="w-full px-6 py-4 bg-primary text-white font-bold rounded-full hover:bg-primary-dark transition-colors flex items-center justify-center gap-2 text-lg disabled:opacity-50"
           >
             {loading ? (
