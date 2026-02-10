@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { notifyAdminNewApplication } from "@/lib/email";
 
 export async function submitTappaApplication(formData: FormData) {
   const supabase = await createClient();
@@ -45,6 +46,25 @@ export async function submitTappaApplication(formData: FormData) {
 
   if (error) {
     return { error: "Errore nell'invio della domanda: " + error.message };
+  }
+
+  // Send email notification to admin (don't fail if email fails)
+  try {
+    await notifyAdminNewApplication({
+      nome_organizzatore: nomeOrganizzatore,
+      email_organizzatore: emailOrganizzatore,
+      telefono_organizzatore: telefonoOrganizzatore || null,
+      nome_torneo: nomeTorneo,
+      nome_completo_torneo: nomeCompletoTorneo || null,
+      data_proposta: dataProposta,
+      orario_proposto: orarioProposto || "16:00",
+      luogo,
+      provincia: provincia || null,
+      descrizione: descrizione || null,
+    });
+  } catch (emailError) {
+    console.error("Failed to send admin notification email:", emailError);
+    // Don't fail the submission if email fails
   }
 
   revalidatePath("/admin");

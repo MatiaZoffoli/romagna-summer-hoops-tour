@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Shield, Trophy, Plus, Newspaper, MapPin, Loader2, CheckCircle, Lock, FileText, X } from "lucide-react";
+import { Shield, Trophy, Plus, Newspaper, MapPin, Loader2, CheckCircle, Lock, FileText, X, Eye, Edit2 } from "lucide-react";
 import { addTappaResult, updateTappaStatus, addNews, addTappa, getAdminData, approveTappaApplication, rejectTappaApplication } from "@/app/actions/admin";
 import { sistemaPunteggio } from "@/data/placeholder";
 
@@ -39,6 +39,10 @@ export default function AdminPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"risultati" | "tappe" | "news" | "stato" | "applicazioni">("risultati");
+  const [previewApp, setPreviewApp] = useState<AdminData["applications"][0] | null>(null);
+  const [editingApp, setEditingApp] = useState<AdminData["applications"][0] | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [showRejectDialog, setShowRejectDialog] = useState<string | null>(null);
 
   async function handleLogin() {
     setLoading(true);
@@ -126,16 +130,48 @@ export default function AdminPage() {
     setLoading(false);
   }
 
-  async function handleApproveApplication(applicationId: string) {
+  async function handleApproveApplication(e: React.FormEvent<HTMLFormElement> | null, applicationId?: string) {
+    e?.preventDefault();
     setError("");
     setLoading(true);
-    const formData = new FormData();
+    const formData = new FormData(e?.currentTarget || undefined);
     formData.set("adminPassword", password);
-    formData.set("applicationId", applicationId);
+    formData.set("applicationId", applicationId || editingApp?.id || "");
+    
+    // Include edited fields if editing
+    if (editingApp) {
+      const nome = (e?.currentTarget?.querySelector('[name="nome"]') as HTMLInputElement)?.value || editingApp.nome_torneo;
+      const nomeCompleto = (e?.currentTarget?.querySelector('[name="nomeCompleto"]') as HTMLInputElement)?.value || editingApp.nome_completo_torneo || "";
+      const data = (e?.currentTarget?.querySelector('[name="data"]') as HTMLInputElement)?.value || editingApp.data_proposta;
+      const orario = (e?.currentTarget?.querySelector('[name="orario"]') as HTMLInputElement)?.value || editingApp.orario_proposto;
+      const luogo = (e?.currentTarget?.querySelector('[name="luogo"]') as HTMLInputElement)?.value || editingApp.luogo;
+      const indirizzo = (e?.currentTarget?.querySelector('[name="indirizzo"]') as HTMLInputElement)?.value || editingApp.indirizzo || "";
+      const provincia = (e?.currentTarget?.querySelector('[name="provincia"]') as HTMLInputElement)?.value || editingApp.provincia || "";
+      const organizzatore = (e?.currentTarget?.querySelector('[name="organizzatore"]') as HTMLInputElement)?.value || editingApp.nome_organizzatore;
+      const contattoOrganizzatore = (e?.currentTarget?.querySelector('[name="contattoOrganizzatore"]') as HTMLInputElement)?.value || editingApp.email_organizzatore;
+      const instagram = (e?.currentTarget?.querySelector('[name="instagram"]') as HTMLInputElement)?.value || editingApp.instagram_torneo || "";
+      const descrizione = (e?.currentTarget?.querySelector('[name="descrizione"]') as HTMLTextAreaElement)?.value || editingApp.descrizione || "";
+      const stato = (e?.currentTarget?.querySelector('[name="stato"]') as HTMLSelectElement)?.value || "in-arrivo";
+      
+      formData.set("nome", nome);
+      formData.set("nomeCompleto", nomeCompleto);
+      formData.set("data", data);
+      formData.set("orario", orario);
+      formData.set("luogo", luogo);
+      formData.set("indirizzo", indirizzo);
+      formData.set("provincia", provincia);
+      formData.set("organizzatore", organizzatore);
+      formData.set("contattoOrganizzatore", contattoOrganizzatore);
+      formData.set("instagram", instagram);
+      formData.set("descrizione", descrizione);
+      formData.set("stato", stato);
+    }
+    
     const result = await approveTappaApplication(formData);
     if (result.error) setError(result.error);
     else {
       showMessage("Applicazione approvata! Tappa creata.");
+      setEditingApp(null);
       await refreshData();
     }
     setLoading(false);
@@ -152,6 +188,8 @@ export default function AdminPage() {
     if (result.error) setError(result.error);
     else {
       showMessage("Applicazione rifiutata.");
+      setShowRejectDialog(null);
+      setRejectReason("");
       await refreshData();
     }
     setLoading(false);
@@ -462,6 +500,245 @@ export default function AdminPage() {
         {/* ===== APPLICAZIONI ===== */}
         {activeTab === "applicazioni" && (
           <div className="space-y-6">
+            {/* Preview Modal */}
+            {previewApp && (
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-surface rounded-2xl border border-border max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                  <div className="p-6 border-b border-border flex items-center justify-between">
+                    <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider">
+                      ANTEPRIMA APPLICAZIONE
+                    </h2>
+                    <button
+                      onClick={() => setPreviewApp(null)}
+                      className="p-2 hover:bg-background rounded-lg transition-colors"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+                  <div className="p-6 space-y-4">
+                    <div>
+                      <h3 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider mb-2">
+                        {previewApp.nome_torneo}
+                      </h3>
+                      {previewApp.nome_completo_torneo && (
+                        <p className="text-sm text-muted">{previewApp.nome_completo_torneo}</p>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted">Organizzatore:</span>{" "}
+                        <span className="text-foreground font-medium">{previewApp.nome_organizzatore}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted">Email:</span>{" "}
+                        <a href={`mailto:${previewApp.email_organizzatore}`} className="text-primary hover:text-gold">
+                          {previewApp.email_organizzatore}
+                        </a>
+                      </div>
+                      {previewApp.telefono_organizzatore && (
+                        <div>
+                          <span className="text-muted">Telefono:</span>{" "}
+                          <span className="text-foreground">{previewApp.telefono_organizzatore}</span>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-muted">Data:</span>{" "}
+                        <span className="text-foreground">{previewApp.data_proposta} · {previewApp.orario_proposto}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted">Luogo:</span>{" "}
+                        <span className="text-foreground">{previewApp.luogo}{previewApp.provincia ? ` (${previewApp.provincia})` : ''}</span>
+                      </div>
+                      {previewApp.indirizzo && (
+                        <div>
+                          <span className="text-muted">Indirizzo:</span>{" "}
+                          <span className="text-foreground">{previewApp.indirizzo}</span>
+                        </div>
+                      )}
+                      {previewApp.instagram_torneo && (
+                        <div>
+                          <span className="text-muted">Instagram:</span>{" "}
+                          <span className="text-foreground">{previewApp.instagram_torneo}</span>
+                        </div>
+                      )}
+                      {previewApp.numero_squadre_previste && (
+                        <div>
+                          <span className="text-muted">Squadre previste:</span>{" "}
+                          <span className="text-foreground">{previewApp.numero_squadre_previste}</span>
+                        </div>
+                      )}
+                    </div>
+                    {previewApp.descrizione && (
+                      <div>
+                        <p className="text-xs text-muted mb-1">Descrizione:</p>
+                        <p className="text-sm text-foreground whitespace-pre-wrap">{previewApp.descrizione}</p>
+                      </div>
+                    )}
+                    {previewApp.note_aggiuntive && (
+                      <div className="p-3 bg-background rounded-lg border border-border">
+                        <p className="text-xs text-muted mb-1">Note aggiuntive:</p>
+                        <p className="text-sm text-foreground whitespace-pre-wrap">{previewApp.note_aggiuntive}</p>
+                      </div>
+                    )}
+                    <div className="pt-4 border-t border-border flex gap-3">
+                      <button
+                        onClick={() => {
+                          setPreviewApp(null);
+                          setEditingApp(previewApp);
+                        }}
+                        className="px-4 py-2 bg-primary text-white text-sm rounded-full hover:bg-primary-dark transition-colors flex items-center gap-2"
+                      >
+                        <Edit2 size={14} />
+                        Modifica e Approva
+                      </button>
+                      <button
+                        onClick={() => setPreviewApp(null)}
+                        className="px-4 py-2 bg-surface border border-border text-foreground text-sm rounded-full hover:bg-background transition-colors"
+                      >
+                        Chiudi
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Edit Modal */}
+            {editingApp && (
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-surface rounded-2xl border border-border max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                  <div className="p-6 border-b border-border flex items-center justify-between">
+                    <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider">
+                      MODIFICA E APPROVA
+                    </h2>
+                    <button
+                      onClick={() => setEditingApp(null)}
+                      className="p-2 hover:bg-background rounded-lg transition-colors"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+                  <form onSubmit={(e) => handleApproveApplication(e)} className="p-6 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-muted mb-2">Nome Breve *</label>
+                        <input name="nome" defaultValue={editingApp.nome_torneo} required className={inputClass} />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-muted mb-2">Nome Completo</label>
+                        <input name="nomeCompleto" defaultValue={editingApp.nome_completo_torneo || ""} className={inputClass} />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-muted mb-2">Data *</label>
+                        <input name="data" defaultValue={editingApp.data_proposta} required className={inputClass} />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-muted mb-2">Orario</label>
+                        <input name="orario" defaultValue={editingApp.orario_proposto || "16:00"} className={inputClass} />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-muted mb-2">Luogo *</label>
+                        <input name="luogo" defaultValue={editingApp.luogo} required className={inputClass} />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-muted mb-2">Indirizzo</label>
+                        <input name="indirizzo" defaultValue={editingApp.indirizzo || ""} className={inputClass} />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-muted mb-2">Provincia</label>
+                        <input name="provincia" defaultValue={editingApp.provincia || ""} className={inputClass} />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-muted mb-2">Organizzatore</label>
+                        <input name="organizzatore" defaultValue={editingApp.nome_organizzatore} className={inputClass} />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-muted mb-2">Contatto Organizzatore</label>
+                        <input name="contattoOrganizzatore" defaultValue={editingApp.email_organizzatore} className={inputClass} />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-muted mb-2">Instagram</label>
+                        <input name="instagram" defaultValue={editingApp.instagram_torneo || ""} className={inputClass} />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-muted mb-2">Stato</label>
+                        <select name="stato" defaultValue="in-arrivo" className={inputClass}>
+                          <option value="in-arrivo">In Arrivo</option>
+                          <option value="prossima">Prossima</option>
+                          <option value="completata">Completata</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-muted mb-2">Descrizione</label>
+                      <textarea name="descrizione" rows={4} defaultValue={editingApp.descrizione || ""} className={inputClass} />
+                    </div>
+                    <div className="pt-4 border-t border-border flex gap-3">
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="px-4 py-2 bg-green-500 text-white text-sm rounded-full hover:bg-green-600 transition-colors flex items-center gap-2 disabled:opacity-50"
+                      >
+                        {loading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
+                        Approva Tappa
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingApp(null)}
+                        className="px-4 py-2 bg-surface border border-border text-foreground text-sm rounded-full hover:bg-background transition-colors"
+                      >
+                        Annulla
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* Reject Dialog */}
+            {showRejectDialog && (
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-surface rounded-2xl border border-border max-w-md w-full">
+                  <div className="p-6 border-b border-border">
+                    <h2 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider">
+                      RIFIUTA APPLICAZIONE
+                    </h2>
+                  </div>
+                  <div className="p-6 space-y-4">
+                    <div>
+                      <label className="block text-sm text-muted mb-2">Motivo del rifiuto (opzionale)</label>
+                      <textarea
+                        value={rejectReason}
+                        onChange={(e) => setRejectReason(e.target.value)}
+                        rows={4}
+                        placeholder="Inserisci un motivo per il rifiuto..."
+                        className={inputClass}
+                      />
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => handleRejectApplication(showRejectDialog, rejectReason)}
+                        disabled={loading}
+                        className="px-4 py-2 bg-red-500 text-white text-sm rounded-full hover:bg-red-600 transition-colors flex items-center gap-2 disabled:opacity-50"
+                      >
+                        {loading ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
+                        Conferma Rifiuto
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowRejectDialog(null);
+                          setRejectReason("");
+                        }}
+                        className="px-4 py-2 bg-surface border border-border text-foreground text-sm rounded-full hover:bg-background transition-colors"
+                      >
+                        Annulla
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Pending Applications */}
             {data && data.applications.filter(a => a.stato === 'pending').length > 0 && (
               <div>
@@ -519,29 +796,34 @@ export default function AdminPage() {
                       </div>
 
                       {app.descrizione && (
-                        <p className="text-sm text-muted mb-4">{app.descrizione}</p>
+                        <p className="text-sm text-muted mb-4 line-clamp-2">{app.descrizione}</p>
                       )}
 
                       {app.note_aggiuntive && (
                         <div className="p-3 bg-background rounded-lg border border-border mb-4">
                           <p className="text-xs text-muted mb-1">Note aggiuntive:</p>
-                          <p className="text-sm text-foreground">{app.note_aggiuntive}</p>
+                          <p className="text-sm text-foreground line-clamp-2">{app.note_aggiuntive}</p>
                         </div>
                       )}
 
                       <div className="flex gap-3">
                         <button
-                          onClick={() => handleApproveApplication(app.id)}
-                          disabled={loading}
-                          className="px-4 py-2 bg-green-500 text-white text-sm rounded-full hover:bg-green-600 transition-colors flex items-center gap-2 disabled:opacity-50"
+                          onClick={() => setPreviewApp(app)}
+                          className="px-4 py-2 bg-surface border border-border text-foreground text-sm rounded-full hover:bg-background transition-colors flex items-center gap-2"
                         >
-                          <CheckCircle size={14} />
-                          Approva
+                          <Eye size={14} />
+                          Anteprima
                         </button>
                         <button
-                          onClick={() => handleRejectApplication(app.id)}
-                          disabled={loading}
-                          className="px-4 py-2 bg-red-500 text-white text-sm rounded-full hover:bg-red-600 transition-colors flex items-center gap-2 disabled:opacity-50"
+                          onClick={() => setEditingApp(app)}
+                          className="px-4 py-2 bg-primary text-white text-sm rounded-full hover:bg-primary-dark transition-colors flex items-center gap-2"
+                        >
+                          <Edit2 size={14} />
+                          Modifica e Approva
+                        </button>
+                        <button
+                          onClick={() => setShowRejectDialog(app.id)}
+                          className="px-4 py-2 bg-red-500 text-white text-sm rounded-full hover:bg-red-600 transition-colors flex items-center gap-2"
                         >
                           <X size={14} />
                           Rifiuta
