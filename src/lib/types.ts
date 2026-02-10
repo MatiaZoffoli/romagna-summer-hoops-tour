@@ -1,0 +1,75 @@
+// ============================================
+// Database types matching Supabase schema
+// ============================================
+
+export interface DbSquadra {
+  id: string;
+  auth_user_id: string;
+  nome: string;
+  motto: string | null;
+  instagram: string | null;
+  email: string;
+  telefono: string | null;
+  created_at: string;
+}
+
+export interface DbGiocatore {
+  id: string;
+  squadra_id: string;
+  nome: string;
+  cognome: string;
+  ruolo: string | null;
+  instagram: string | null;
+  created_at: string;
+}
+
+export interface DbTappa {
+  id: string;
+  slug: string;
+  nome: string;
+  nome_completo: string | null;
+  data: string;
+  orario: string;
+  luogo: string;
+  indirizzo: string | null;
+  provincia: string | null;
+  organizzatore: string | null;
+  contatto_organizzatore: string | null;
+  instagram: string | null;
+  descrizione: string | null;
+  stato: "prossima" | "completata" | "in-arrivo";
+  created_at: string;
+}
+
+export interface DbRisultato {
+  id: string;
+  tappa_id: string;
+  squadra_id: string;
+  posizione: number;
+  punti: number;
+  created_at: string;
+}
+
+export interface DbNews {
+  id: string;
+  titolo: string;
+  contenuto: string;
+  anteprima: string;
+  data: string;
+  created_at: string;
+}
+
+// ============================================
+// Frontend types (enriched for display)
+// ============================================
+
+export interface SquadraConPunti extends DbSquadra {
+  giocatori: DbGiocatore[];
+  punti_totali: number;
+  tappe_giocate: number;
+  risultati: (DbRisultato & { tappa_slug: string })[];
+}
+
+export interface TappaConRisultati extends DbTappa {
+  risultati: (DbRisultato & { squadra_nome: string })[];
+}

@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MapPin, Calendar, Clock, User, Mail, Instagram, ArrowLeft, Trophy } from "lucide-react";
-import { tappe } from "@/data/placeholder";
+import { getTappaBySlug } from "@/lib/data";
+
+export const revalidate = 60;
 
 interface TappaPageProps {
   params: Promise<{ id: string }>;
@@ -9,7 +11,7 @@ interface TappaPageProps {
 
 export default async function TappaDetailPage({ params }: TappaPageProps) {
   const { id } = await params;
-  const tappa = tappe.find((t) => t.id === id);
+  const tappa = await getTappaBySlug(id);
 
   if (!tappa) {
     notFound();
@@ -51,7 +53,7 @@ export default async function TappaDetailPage({ params }: TappaPageProps) {
             {tappa.nome}
           </h1>
           <p className="text-muted">
-            {tappa.nomeCompleto}
+            {tappa.nome_completo}
           </p>
         </div>
 
@@ -80,14 +82,16 @@ export default async function TappaDetailPage({ params }: TappaPageProps) {
               <User size={18} />
               <span className="text-xs uppercase tracking-wider font-semibold text-gold">Organizzatore</span>
             </div>
-            <p className="text-foreground font-medium">{tappa.organizzatore}</p>
-            <a
-              href={`mailto:${tappa.contattoOrganizzatore}`}
-              className="flex items-center gap-1.5 text-muted text-sm hover:text-primary transition-colors mt-1"
-            >
-              <Mail size={14} />
-              {tappa.contattoOrganizzatore}
-            </a>
+            <p className="text-foreground font-medium">{tappa.organizzatore || "Da definire"}</p>
+            {tappa.contatto_organizzatore && (
+              <a
+                href={`mailto:${tappa.contatto_organizzatore}`}
+                className="flex items-center gap-1.5 text-muted text-sm hover:text-primary transition-colors mt-1"
+              >
+                <Mail size={14} />
+                {tappa.contatto_organizzatore}
+              </a>
+            )}
           </div>
 
           <div className="p-6 bg-surface rounded-xl border border-border">
@@ -95,14 +99,18 @@ export default async function TappaDetailPage({ params }: TappaPageProps) {
               <Instagram size={18} />
               <span className="text-xs uppercase tracking-wider font-semibold text-pink-400">Social</span>
             </div>
-            <a
-              href={tappa.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-foreground font-medium hover:text-primary transition-colors"
-            >
-              Segui su Instagram
-            </a>
+            {tappa.instagram ? (
+              <a
+                href={`https://instagram.com/${tappa.instagram.replace("@", "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-foreground font-medium hover:text-primary transition-colors"
+              >
+                {tappa.instagram}
+              </a>
+            ) : (
+              <p className="text-muted text-sm">In arrivo</p>
+            )}
             <p className="text-muted text-sm">Per aggiornamenti e iscrizioni</p>
           </div>
         </div>
@@ -133,7 +141,7 @@ export default async function TappaDetailPage({ params }: TappaPageProps) {
           </div>
         </div>
 
-        {/* Results placeholder */}
+        {/* Results */}
         <div className="mb-10">
           <div className="flex items-center gap-3 mb-4">
             <Trophy size={20} className="text-gold" />
@@ -163,10 +171,10 @@ export default async function TappaDetailPage({ params }: TappaPageProps) {
                     >
                       {r.posizione}°
                     </span>
-                    <span className="font-medium">{r.squadra}</span>
+                    <span className="font-medium">{r.squadra_nome}</span>
                   </div>
                   <span className="font-[family-name:var(--font-bebas)] text-lg text-primary">
-                    {r.puntiTour} PT
+                    {r.punti} PT
                   </span>
                 </div>
               ))}
@@ -188,13 +196,17 @@ export default async function TappaDetailPage({ params }: TappaPageProps) {
           <p className="text-muted text-sm mb-4">
             Contatta direttamente l&apos;organizzatore per iscrivere la tua squadra a questa tappa.
           </p>
-          <a
-            href={`mailto:${tappa.contattoOrganizzatore}`}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white font-bold rounded-full hover:bg-primary-dark transition-colors"
-          >
-            <Mail size={18} />
-            Contatta {tappa.organizzatore}
-          </a>
+          {tappa.contatto_organizzatore ? (
+            <a
+              href={`mailto:${tappa.contatto_organizzatore}`}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white font-bold rounded-full hover:bg-primary-dark transition-colors"
+            >
+              <Mail size={18} />
+              Contatta {tappa.organizzatore}
+            </a>
+          ) : (
+            <p className="text-sm text-muted">Contatti organizzatore in arrivo</p>
+          )}
         </div>
       </div>
     </div>

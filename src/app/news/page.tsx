@@ -1,7 +1,11 @@
 import { Newspaper } from "lucide-react";
-import { news } from "@/data/placeholder";
+import { getNews } from "@/lib/data";
 
-export default function NewsPage() {
+export const revalidate = 60;
+
+export default async function NewsPage() {
+  const newsItems = await getNews();
+
   return (
     <div className="pt-24 pb-20">
       <div className="max-w-4xl mx-auto px-4">
@@ -20,7 +24,7 @@ export default function NewsPage() {
 
         {/* News list */}
         <div className="space-y-8">
-          {news.map((n) => (
+          {newsItems.map((n) => (
             <article
               key={n.id}
               id={n.id}
@@ -41,7 +45,7 @@ export default function NewsPage() {
         </div>
 
         {/* More coming */}
-        {news.length === 0 && (
+        {newsItems.length === 0 && (
           <div className="p-12 bg-surface rounded-2xl border border-dashed border-border text-center">
             <Newspaper size={48} className="mx-auto mb-4 text-primary/30" />
             <p className="text-lg font-medium text-muted mb-2">

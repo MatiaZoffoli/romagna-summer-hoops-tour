@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Users, Trophy, Instagram, User } from "lucide-react";
-import { squadre, tappe } from "@/data/placeholder";
+import { getSquadraBySlug, getTappe } from "@/lib/data";
+
+export const revalidate = 60;
 
 interface SquadraPageProps {
   params: Promise<{ id: string }>;
@@ -9,7 +11,10 @@ interface SquadraPageProps {
 
 export default async function SquadraDetailPage({ params }: SquadraPageProps) {
   const { id } = await params;
-  const squadra = squadre.find((s) => s.id === id);
+  const [squadra, tappe] = await Promise.all([
+    getSquadraBySlug(id),
+    getTappe(),
+  ]);
 
   if (!squadra) {
     notFound();
@@ -60,14 +65,14 @@ export default async function SquadraDetailPage({ params }: SquadraPageProps) {
           <div className="p-6 bg-surface rounded-xl border border-border text-center">
             <Trophy size={20} className="text-primary mx-auto mb-2" />
             <p className="font-[family-name:var(--font-bebas)] text-3xl text-primary">
-              {squadra.puntiTotali}
+              {squadra.punti_totali}
             </p>
             <p className="text-xs text-muted uppercase tracking-wider">Punti Totali</p>
           </div>
           <div className="p-6 bg-surface rounded-xl border border-border text-center">
             <Users size={20} className="text-accent mx-auto mb-2" />
             <p className="font-[family-name:var(--font-bebas)] text-3xl text-accent">
-              {squadra.tappeGiocate}
+              {squadra.tappe_giocate}
             </p>
             <p className="text-xs text-muted uppercase tracking-wider">Tappe Giocate</p>
           </div>
@@ -88,7 +93,7 @@ export default async function SquadraDetailPage({ params }: SquadraPageProps) {
           <div className="bg-surface rounded-2xl border border-border overflow-hidden">
             {squadra.giocatori.map((g, i) => (
               <div
-                key={i}
+                key={g.id || i}
                 className="flex items-center justify-between px-6 py-4 border-b border-border/50"
               >
                 <div className="flex items-center gap-4">
@@ -125,18 +130,18 @@ export default async function SquadraDetailPage({ params }: SquadraPageProps) {
           <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider mb-4">
             RISULTATI PER TAPPA
           </h2>
-          {squadra.risultatiPerTappa.length > 0 ? (
+          {squadra.risultati.length > 0 ? (
             <div className="bg-surface rounded-2xl border border-border overflow-hidden">
-              {squadra.risultatiPerTappa.map((r) => {
-                const tappa = tappe.find((t) => t.id === r.tappaId);
+              {squadra.risultati.map((r) => {
+                const tappa = tappe.find((t) => t.id === r.tappa_id);
                 return (
                   <div
-                    key={r.tappaId}
+                    key={r.id}
                     className="flex items-center justify-between px-6 py-4 border-b border-border/50"
                   >
                     <div>
                       <p className="font-medium text-foreground">
-                        {tappa?.nome || r.tappaId}
+                        {tappa?.nome || "Tappa"}
                       </p>
                       <p className="text-xs text-muted">{tappa?.data}</p>
                     </div>

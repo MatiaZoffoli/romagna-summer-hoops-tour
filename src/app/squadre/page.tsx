@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { Users, ArrowRight, Instagram, Trophy } from "lucide-react";
-import { squadre } from "@/data/placeholder";
+import { getSquadreConPunti } from "@/lib/data";
 
-export default function SquadrePage() {
+export const revalidate = 60;
+
+export default async function SquadrePage() {
+  const squadre = await getSquadreConPunti();
+
   return (
     <div className="pt-24 pb-20">
       <div className="max-w-7xl mx-auto px-4">
@@ -55,13 +59,13 @@ export default function SquadrePage() {
                   </span>
                   <span className="flex items-center gap-1.5">
                     <Trophy size={14} className="text-primary" />
-                    {sq.tappeGiocate} tappe
+                    {sq.tappe_giocate} tappe
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div className="font-[family-name:var(--font-bebas)] text-xl text-primary">
-                    {sq.puntiTotali} PT
+                    {sq.punti_totali} PT
                   </div>
                   {sq.instagram && (
                     <span className="text-xs text-muted flex items-center gap-1">

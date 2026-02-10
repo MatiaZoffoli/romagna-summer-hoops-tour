@@ -1,10 +1,20 @@
 import Link from "next/link";
 import { Calendar, Trophy, MapPin, Users, ArrowRight, Star, Flame } from "lucide-react";
-import { tappe, squadre, news } from "@/data/placeholder";
+import { getTappe, getSquadreConPunti, getNews } from "@/lib/data";
 
-export default function Home() {
+export const revalidate = 60; // Revalidate every 60 seconds
+
+export default async function Home() {
+  const [tappe, squadre, newsItems] = await Promise.all([
+    getTappe(),
+    getSquadreConPunti(),
+    getNews(),
+  ]);
+
   const prossimaTappa = tappe.find((t) => t.stato === "prossima");
-  const topSquadre = squadre.slice(0, 5);
+  const topSquadre = [...squadre]
+    .sort((a, b) => b.punti_totali - a.punti_totali)
+    .slice(0, 5);
 
   return (
     <div className="pt-16">
@@ -113,7 +123,7 @@ export default function Home() {
               </h2>
             </div>
 
-            <Link href={`/tappe/${prossimaTappa.id}`}>
+            <Link href={`/tappe/${prossimaTappa.slug}`}>
               <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-surface via-surface to-secondary border border-border hover:border-primary/50 transition-all group p-8 sm:p-12">
                 <div className="absolute top-4 right-4 px-3 py-1 bg-primary/20 text-primary text-xs font-semibold rounded-full border border-primary/30">
                   PROSSIMA
@@ -252,10 +262,10 @@ export default function Home() {
                   </span>
                   <span className="font-semibold text-foreground">{sq.nome}</span>
                   <span className="hidden sm:block text-right text-muted">
-                    {sq.tappeGiocate}
+                    {sq.tappe_giocate}
                   </span>
                   <span className="text-right font-[family-name:var(--font-bebas)] text-xl text-primary">
-                    {sq.puntiTotali}
+                    {sq.punti_totali}
                   </span>
                 </div>
               ))
@@ -287,7 +297,7 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {news.slice(0, 2).map((n) => (
+            {newsItems.slice(0, 2).map((n) => (
               <Link key={n.id} href={`/news#${n.id}`}>
                 <div className="p-6 bg-surface rounded-2xl border border-border hover:border-primary/30 transition-all group h-full">
                   <p className="text-xs text-primary mb-2 uppercase tracking-wider">

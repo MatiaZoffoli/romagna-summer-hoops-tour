@@ -16,7 +16,10 @@ const bebas = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Romagna Summer Hoops Tour | Basket 3x3",
+  title: {
+    default: "Romagna Summer Hoops Tour | Basket 3x3",
+    template: "%s | Romagna Summer Hoops Tour",
+  },
   description:
     "Il circuito estivo di basket 3x3 che unisce la Romagna. Tornei, classifiche, street culture e l'evento finale che incorona i campioni dell'estate.",
   keywords: [
@@ -26,7 +29,28 @@ export const metadata: Metadata = {
     "torneo basket",
     "summer hoops",
     "basket estate",
+    "3x3 basketball",
+    "street basketball",
+    "torneo 3x3 romagna",
   ],
+  openGraph: {
+    title: "Romagna Summer Hoops Tour",
+    description:
+      "Il primo circuito estivo di basket 3x3 in Romagna. Canestri, musica e street culture - da Maggio a Settembre 2026.",
+    type: "website",
+    locale: "it_IT",
+    siteName: "Romagna Summer Hoops Tour",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Romagna Summer Hoops Tour",
+    description:
+      "Il primo circuito estivo di basket 3x3 in Romagna. Canestri, musica e street culture.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

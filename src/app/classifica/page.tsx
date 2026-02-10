@@ -1,12 +1,11 @@
 import Link from "next/link";
-import { Trophy, ArrowRight, Info } from "lucide-react";
-import { squadre, tappe } from "@/data/placeholder";
+import { Trophy, Info } from "lucide-react";
+import { getClassifica } from "@/lib/data";
 
-export default function ClassificaPage() {
-  // Sort by total points descending
-  const classificaOrdinata = [...squadre].sort(
-    (a, b) => b.puntiTotali - a.puntiTotali
-  );
+export const revalidate = 60;
+
+export default async function ClassificaPage() {
+  const { squadre: classificaOrdinata, tappe } = await getClassifica();
 
   const tappeCompletate = tappe.filter((t) => t.stato === "completata").length;
 
@@ -98,78 +97,81 @@ export default function ClassificaPage() {
           </div>
 
           {classificaOrdinata.length > 0 ? (
-            classificaOrdinata.map((sq, i) => (
-              <Link key={sq.id} href={`/squadre/${sq.id}`}>
-                {/* Desktop row */}
-                <div
-                  className={`hidden sm:grid items-center px-6 py-4 border-b border-border/50 hover:bg-surface-light transition-colors ${
-                    i < 16 ? "" : "opacity-50"
-                  }`}
-                  style={{ gridTemplateColumns: desktopCols }}
-                >
-                  <span
-                    className={`font-[family-name:var(--font-bebas)] text-2xl ${
-                      i === 0
-                        ? "text-gold"
-                        : i === 1
-                        ? "text-gray-400"
-                        : i === 2
-                        ? "text-orange-600"
-                        : "text-muted"
+            classificaOrdinata.map((sq, i) => {
+              const slug = sq.nome.toLowerCase().replace(/\s+/g, "-");
+              return (
+                <Link key={sq.id} href={`/squadre/${sq.id}`}>
+                  {/* Desktop row */}
+                  <div
+                    className={`hidden sm:grid items-center px-6 py-4 border-b border-border/50 hover:bg-surface-light transition-colors ${
+                      i < 16 ? "" : "opacity-50"
                     }`}
+                    style={{ gridTemplateColumns: desktopCols }}
                   >
-                    {i + 1}
-                  </span>
-                  <div>
-                    <span className="font-semibold text-foreground">{sq.nome}</span>
-                    {sq.motto && (
-                      <p className="text-xs text-muted">{sq.motto}</p>
-                    )}
+                    <span
+                      className={`font-[family-name:var(--font-bebas)] text-2xl ${
+                        i === 0
+                          ? "text-gold"
+                          : i === 1
+                          ? "text-gray-400"
+                          : i === 2
+                          ? "text-orange-600"
+                          : "text-muted"
+                      }`}
+                    >
+                      {i + 1}
+                    </span>
+                    <div>
+                      <span className="font-semibold text-foreground">{sq.nome}</span>
+                      {sq.motto && (
+                        <p className="text-xs text-muted">{sq.motto}</p>
+                      )}
+                    </div>
+                    {tappe.map((t) => {
+                      const risultato = sq.risultati.find(
+                        (r) => r.tappa_id === t.id
+                      );
+                      return (
+                        <span key={t.id} className="text-center text-sm text-muted">
+                          {risultato ? risultato.punti : "-"}
+                        </span>
+                      );
+                    })}
+                    <span className="text-center text-muted">{sq.tappe_giocate}</span>
+                    <span className="text-right font-[family-name:var(--font-bebas)] text-xl text-primary">
+                      {sq.punti_totali}
+                    </span>
                   </div>
-                  {tappe.map((t) => {
-                    const risultato = sq.risultatiPerTappa.find(
-                      (r) => r.tappaId === t.id
-                    );
-                    return (
-                      <span key={t.id} className="text-center text-sm text-muted">
-                        {risultato ? risultato.punti : "-"}
-                      </span>
-                    );
-                  })}
-                  <span className="text-center text-muted">{sq.tappeGiocate}</span>
-                  <span className="text-right font-[family-name:var(--font-bebas)] text-xl text-primary">
-                    {sq.puntiTotali}
-                  </span>
-                </div>
 
-                {/* Mobile row */}
-                <div
-                  className={`grid sm:hidden items-center px-4 py-4 border-b border-border/50 hover:bg-surface-light transition-colors ${
-                    i < 16 ? "" : "opacity-50"
-                  }`}
-                  style={{ gridTemplateColumns: mobileCols }}
-                >
-                  <span
-                    className={`font-[family-name:var(--font-bebas)] text-2xl ${
-                      i === 0
-                        ? "text-gold"
-                        : i === 1
-                        ? "text-gray-400"
-                        : i === 2
-                        ? "text-orange-600"
-                        : "text-muted"
+                  {/* Mobile row */}
+                  <div
+                    className={`grid sm:hidden items-center px-4 py-4 border-b border-border/50 hover:bg-surface-light transition-colors ${
+                      i < 16 ? "" : "opacity-50"
                     }`}
+                    style={{ gridTemplateColumns: mobileCols }}
                   >
-                    {i + 1}
-                  </span>
-                  <span className="font-semibold text-foreground">{sq.nome}</span>
-                  <span className="text-center text-muted">{sq.tappeGiocate}</span>
-                  <span className="text-right font-[family-name:var(--font-bebas)] text-xl text-primary">
-                    {sq.puntiTotali}
-                  </span>
-                </div>
-              </Link>
-            ))
+                    <span
+                      className={`font-[family-name:var(--font-bebas)] text-2xl ${
+                        i === 0
+                          ? "text-gold"
+                          : i === 1
+                          ? "text-gray-400"
+                          : i === 2
+                          ? "text-orange-600"
+                          : "text-muted"
+                      }`}
+                    >
+                      {i + 1}
+                    </span>
+                    <span className="font-semibold text-foreground">{sq.nome}</span>
+                    <span className="text-center text-muted">{sq.tappe_giocate}</span>
+                    <span className="text-right font-[family-name:var(--font-bebas)] text-xl text-primary">
+                      {sq.punti_totali}
+                    </span>
+                  </div>
+                </Link>
+              );
+            })
           ) : (
             <div className="px-6 py-16 text-center text-muted">
               <Trophy size={48} className="mx-auto mb-4 text-primary/30" />

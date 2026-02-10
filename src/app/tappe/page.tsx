@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { MapPin, Calendar, ArrowRight, Clock } from "lucide-react";
-import { tappe } from "@/data/placeholder";
+import { getTappe } from "@/lib/data";
+
+export const revalidate = 60;
 
 const statoBadge = {
   prossima: { label: "PROSSIMA", className: "bg-primary/20 text-primary border-primary/30" },
@@ -8,7 +10,9 @@ const statoBadge = {
   "in-arrivo": { label: "IN ARRIVO", className: "bg-accent/20 text-accent border-accent/30" },
 };
 
-export default function TappePage() {
+export default async function TappePage() {
+  const tappe = await getTappe();
+
   return (
     <div className="pt-24 pb-20">
       <section className="max-w-7xl mx-auto px-4">
@@ -31,7 +35,7 @@ export default function TappePage() {
           {tappe.map((tappa, i) => {
             const badge = statoBadge[tappa.stato];
             return (
-              <Link key={tappa.id} href={`/tappe/${tappa.id}`}>
+              <Link key={tappa.id} href={`/tappe/${tappa.slug}`}>
                 <div className="relative p-6 sm:p-8 bg-surface rounded-2xl border border-border hover:border-primary/40 transition-all group">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-start gap-4">
