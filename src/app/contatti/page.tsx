@@ -1,4 +1,5 @@
-import { Mail, Instagram, MapPin, Phone, ExternalLink } from "lucide-react";
+import Link from "next/link";
+import { Mail, Instagram, MapPin, Phone } from "lucide-react";
 
 export default function ContattiPage() {
   return (
@@ -105,18 +106,15 @@ export default function ContattiPage() {
                 </div>
               </div>
 
-              {/* Google Form link placeholder */}
-              <a
-                href="https://forms.google.com"
-                target="_blank"
-                rel="noopener noreferrer"
+              {/* Application form link */}
+              <Link
+                href="/diventa-tappa"
                 className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-primary text-white font-bold rounded-full hover:bg-primary-dark transition-colors"
               >
-                Compila il Modulo
-                <ExternalLink size={18} />
-              </a>
+                Candidati Ora
+              </Link>
               <p className="text-xs text-muted/60 text-center mt-3">
-                Verrai reindirizzato al modulo Google Forms
+                Compila il modulo di candidatura
               </p>
             </div>
           </div>

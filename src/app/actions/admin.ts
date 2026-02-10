@@ -168,11 +168,12 @@ export async function getAdminData(password: string) {
 
   const supabase = await createClient();
 
-  const [tappeRes, squadreRes, risultatiRes, newsRes] = await Promise.all([
+  const [tappeRes, squadreRes, risultatiRes, newsRes, applicationsRes] = await Promise.all([
     supabase.from("tappe").select("*").order("created_at"),
     supabase.from("squadre").select("*").order("nome"),
     supabase.from("risultati").select("*, tappe(nome), squadre(nome)").order("created_at", { ascending: false }),
     supabase.from("news").select("*").order("created_at", { ascending: false }),
+    supabase.from("tappa_applications").select("*").order("created_at", { ascending: false }),
   ]);
 
   return {
@@ -180,5 +181,100 @@ export async function getAdminData(password: string) {
     squadre: squadreRes.data || [],
     risultati: risultatiRes.data || [],
     news: newsRes.data || [],
+    applications: applicationsRes.data || [],
   };
+}
+
+export async function approveTappaApplication(formData: FormData) {
+  const password = formData.get("adminPassword") as string;
+  if (!verifyAdmin(password)) {
+    return { error: "Password admin non valida." };
+  }
+
+  const supabase = await createClient();
+  const applicationId = formData.get("applicationId") as string;
+
+  // Get the application
+  const { data: application, error: fetchError } = await supabase
+    .from("tappa_applications")
+    .select("*")
+    .eq("id", applicationId)
+    .single();
+
+  if (fetchError || !application) {
+    return { error: "Applicazione non trovata." };
+  }
+
+  if (application.stato !== "pending") {
+    return { error: "Questa applicazione è già stata processata." };
+  }
+
+  // Create slug from nome_torneo
+  const slug = application.nome_torneo.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+
+  // Create the tappa
+  const { error: tappaError } = await supabase.from("tappe").insert({
+    slug,
+    nome: application.nome_torneo,
+    nome_completo: application.nome_completo_torneo || null,
+    data: application.data_proposta,
+    orario: application.orario_proposto || "16:00",
+    luogo: application.luogo,
+    indirizzo: application.indirizzo || null,
+    provincia: application.provincia || null,
+    organizzatore: application.nome_organizzatore,
+    contatto_organizzatore: application.email_organizzatore,
+    instagram: application.instagram_torneo || null,
+    descrizione: application.descrizione || null,
+    stato: "in-arrivo",
+  });
+
+  if (tappaError) {
+    return { error: "Errore nella creazione della tappa: " + tappaError.message };
+  }
+
+  // Update application status
+  const { error: updateError } = await supabase
+    .from("tappa_applications")
+    .update({
+      stato: "approved",
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq("id", applicationId);
+
+  if (updateError) {
+    return { error: "Errore nell'aggiornamento: " + updateError.message };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/tappe");
+  revalidatePath("/");
+  return { success: true };
+}
+
+export async function rejectTappaApplication(formData: FormData) {
+  const password = formData.get("adminPassword") as string;
+  if (!verifyAdmin(password)) {
+    return { error: "Password admin non valida." };
+  }
+
+  const supabase = await createClient();
+  const applicationId = formData.get("applicationId") as string;
+  const reason = formData.get("reason") as string;
+
+  const { error } = await supabase
+    .from("tappa_applications")
+    .update({
+      stato: "rejected",
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: reason || null,
+    })
+    .eq("id", applicationId);
+
+  if (error) {
+    return { error: "Errore: " + error.message };
+  }
+
+  revalidatePath("/admin");
+  return { success: true };
 }

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Shield, Trophy, Plus, Newspaper, MapPin, Loader2, CheckCircle, Lock } from "lucide-react";
-import { addTappaResult, updateTappaStatus, addNews, addTappa, getAdminData } from "@/app/actions/admin";
+import { Shield, Trophy, Plus, Newspaper, MapPin, Loader2, CheckCircle, Lock, FileText, X } from "lucide-react";
+import { addTappaResult, updateTappaStatus, addNews, addTappa, getAdminData, approveTappaApplication, rejectTappaApplication } from "@/app/actions/admin";
 import { sistemaPunteggio } from "@/data/placeholder";
 
 interface AdminData {
@@ -10,6 +10,25 @@ interface AdminData {
   squadre: { id: string; nome: string }[];
   risultati: { id: string; posizione: number; punti: number; tappe: { nome: string }; squadre: { nome: string } }[];
   news: { id: string; titolo: string; data: string }[];
+  applications: {
+    id: string;
+    nome_organizzatore: string;
+    email_organizzatore: string;
+    telefono_organizzatore: string | null;
+    nome_torneo: string;
+    nome_completo_torneo: string | null;
+    data_proposta: string;
+    orario_proposto: string;
+    luogo: string;
+    indirizzo: string | null;
+    provincia: string | null;
+    instagram_torneo: string | null;
+    descrizione: string | null;
+    numero_squadre_previste: number | null;
+    note_aggiuntive: string | null;
+    stato: string;
+    created_at: string;
+  }[];
 }
 
 export default function AdminPage() {
@@ -19,7 +38,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<"risultati" | "tappe" | "news" | "stato">("risultati");
+  const [activeTab, setActiveTab] = useState<"risultati" | "tappe" | "news" | "stato" | "applicazioni">("risultati");
 
   async function handleLogin() {
     setLoading(true);
@@ -107,6 +126,37 @@ export default function AdminPage() {
     setLoading(false);
   }
 
+  async function handleApproveApplication(applicationId: string) {
+    setError("");
+    setLoading(true);
+    const formData = new FormData();
+    formData.set("adminPassword", password);
+    formData.set("applicationId", applicationId);
+    const result = await approveTappaApplication(formData);
+    if (result.error) setError(result.error);
+    else {
+      showMessage("Applicazione approvata! Tappa creata.");
+      await refreshData();
+    }
+    setLoading(false);
+  }
+
+  async function handleRejectApplication(applicationId: string, reason?: string) {
+    setError("");
+    setLoading(true);
+    const formData = new FormData();
+    formData.set("adminPassword", password);
+    formData.set("applicationId", applicationId);
+    if (reason) formData.set("reason", reason);
+    const result = await rejectTappaApplication(formData);
+    if (result.error) setError(result.error);
+    else {
+      showMessage("Applicazione rifiutata.");
+      await refreshData();
+    }
+    setLoading(false);
+  }
+
   // Login screen
   if (!authenticated) {
     return (
@@ -165,7 +215,7 @@ export default function AdminPage() {
               ADMIN PANEL
             </h1>
             <p className="text-sm text-muted mt-1">
-              {data?.squadre.length} squadre · {data?.tappe.length} tappe · {data?.risultati.length} risultati
+              {data?.squadre.length} squadre · {data?.tappe.length} tappe · {data?.risultati.length} risultati · {data?.applications.filter(a => a.stato === 'pending').length || 0} applicazioni in attesa
             </p>
           </div>
         </div>
@@ -190,6 +240,7 @@ export default function AdminPage() {
             { id: "stato" as const, label: "Stato Tappe", icon: MapPin },
             { id: "tappe" as const, label: "Nuova Tappa", icon: Plus },
             { id: "news" as const, label: "Nuova News", icon: Newspaper },
+            { id: "applicazioni" as const, label: `Applicazioni${data?.applications.filter(a => a.stato === 'pending').length ? ` (${data.applications.filter(a => a.stato === 'pending').length})` : ''}`, icon: FileText },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -405,6 +456,150 @@ export default function AdminPage() {
                 Pubblica News
               </button>
             </form>
+          </div>
+        )}
+
+        {/* ===== APPLICAZIONI ===== */}
+        {activeTab === "applicazioni" && (
+          <div className="space-y-6">
+            {/* Pending Applications */}
+            {data && data.applications.filter(a => a.stato === 'pending').length > 0 && (
+              <div>
+                <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider mb-4">
+                  IN ATTESA DI APPROVAZIONE
+                </h2>
+                <div className="space-y-4">
+                  {data.applications.filter(a => a.stato === 'pending').map((app) => (
+                    <div key={app.id} className="p-6 bg-surface rounded-2xl border border-border">
+                      <div className="flex items-start justify-between gap-4 mb-4">
+                        <div className="flex-1">
+                          <h3 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider mb-2">
+                            {app.nome_torneo}
+                          </h3>
+                          {app.nome_completo_torneo && (
+                            <p className="text-sm text-muted mb-3">{app.nome_completo_torneo}</p>
+                          )}
+                        </div>
+                        <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 text-xs font-semibold rounded-full border border-yellow-500/30">
+                          IN ATTESA
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mb-4">
+                        <div>
+                          <span className="text-muted">Organizzatore:</span>{" "}
+                          <span className="text-foreground font-medium">{app.nome_organizzatore}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted">Email:</span>{" "}
+                          <a href={`mailto:${app.email_organizzatore}`} className="text-primary hover:text-gold">
+                            {app.email_organizzatore}
+                          </a>
+                        </div>
+                        {app.telefono_organizzatore && (
+                          <div>
+                            <span className="text-muted">Telefono:</span>{" "}
+                            <span className="text-foreground">{app.telefono_organizzatore}</span>
+                          </div>
+                        )}
+                        <div>
+                          <span className="text-muted">Data:</span>{" "}
+                          <span className="text-foreground">{app.data_proposta} · {app.orario_proposto}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted">Luogo:</span>{" "}
+                          <span className="text-foreground">{app.luogo}{app.provincia ? ` (${app.provincia})` : ''}</span>
+                        </div>
+                        {app.numero_squadre_previste && (
+                          <div>
+                            <span className="text-muted">Squadre previste:</span>{" "}
+                            <span className="text-foreground">{app.numero_squadre_previste}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {app.descrizione && (
+                        <p className="text-sm text-muted mb-4">{app.descrizione}</p>
+                      )}
+
+                      {app.note_aggiuntive && (
+                        <div className="p-3 bg-background rounded-lg border border-border mb-4">
+                          <p className="text-xs text-muted mb-1">Note aggiuntive:</p>
+                          <p className="text-sm text-foreground">{app.note_aggiuntive}</p>
+                        </div>
+                      )}
+
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => handleApproveApplication(app.id)}
+                          disabled={loading}
+                          className="px-4 py-2 bg-green-500 text-white text-sm rounded-full hover:bg-green-600 transition-colors flex items-center gap-2 disabled:opacity-50"
+                        >
+                          <CheckCircle size={14} />
+                          Approva
+                        </button>
+                        <button
+                          onClick={() => handleRejectApplication(app.id)}
+                          disabled={loading}
+                          className="px-4 py-2 bg-red-500 text-white text-sm rounded-full hover:bg-red-600 transition-colors flex items-center gap-2 disabled:opacity-50"
+                        >
+                          <X size={14} />
+                          Rifiuta
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Approved Applications */}
+            {data && data.applications.filter(a => a.stato === 'approved').length > 0 && (
+              <div>
+                <h2 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider mb-4 text-green-400">
+                  APPROVATE
+                </h2>
+                <div className="space-y-2">
+                  {data.applications.filter(a => a.stato === 'approved').map((app) => (
+                    <div key={app.id} className="p-4 bg-surface rounded-xl border border-green-500/20 flex items-center justify-between">
+                      <div>
+                        <span className="font-medium">{app.nome_torneo}</span>
+                        <span className="text-xs text-muted ml-2">di {app.nome_organizzatore}</span>
+                      </div>
+                      <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full">Approvata</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Rejected Applications */}
+            {data && data.applications.filter(a => a.stato === 'rejected').length > 0 && (
+              <div>
+                <h2 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider mb-4 text-red-400">
+                  RIFIUTATE
+                </h2>
+                <div className="space-y-2">
+                  {data.applications.filter(a => a.stato === 'rejected').map((app) => (
+                    <div key={app.id} className="p-4 bg-surface rounded-xl border border-red-500/20 flex items-center justify-between">
+                      <div>
+                        <span className="font-medium">{app.nome_torneo}</span>
+                        <span className="text-xs text-muted ml-2">di {app.nome_organizzatore}</span>
+                      </div>
+                      <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full">Rifiutata</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* No applications */}
+            {data && data.applications.length === 0 && (
+              <div className="p-12 bg-surface rounded-2xl border border-dashed border-border text-center">
+                <FileText size={48} className="mx-auto mb-4 text-primary/30" />
+                <p className="text-muted">Nessuna applicazione ancora.</p>
+              </div>
+            )}
           </div>
         )}
       </div>

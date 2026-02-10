@@ -80,6 +80,36 @@ create table public.news (
 );
 
 -- ============================================
+-- TAPPA APPLICATIONS (Organizer submissions)
+-- ============================================
+create table public.tappa_applications (
+  id uuid default uuid_generate_v4() primary key,
+  -- Organizer info
+  nome_organizzatore text not null,
+  email_organizzatore text not null,
+  telefono_organizzatore text,
+  -- Tournament info
+  nome_torneo text not null,
+  nome_completo_torneo text,
+  data_proposta text not null,
+  orario_proposto text default '16:00',
+  luogo text not null,
+  indirizzo text,
+  provincia text,
+  instagram_torneo text,
+  descrizione text,
+  -- Additional info
+  numero_squadre_previste integer,
+  note_aggiuntive text,
+  -- Status
+  stato text default 'pending' check (stato in ('pending', 'approved', 'rejected')),
+  -- Timestamps
+  created_at timestamp with time zone default now(),
+  reviewed_at timestamp with time zone,
+  reviewed_by text
+);
+
+-- ============================================
 -- ROW LEVEL SECURITY (RLS)
 -- ============================================
 
@@ -89,6 +119,7 @@ alter table public.giocatori enable row level security;
 alter table public.tappe enable row level security;
 alter table public.risultati enable row level security;
 alter table public.news enable row level security;
+alter table public.tappa_applications enable row level security;
 
 -- SQUADRE policies
 create policy "Squadre are viewable by everyone"
@@ -142,6 +173,13 @@ create policy "Risultati are viewable by everyone"
 -- NEWS policies (public read, admin manages via Supabase dashboard)
 create policy "News are viewable by everyone"
   on public.news for select using (true);
+
+-- TAPPA_APPLICATIONS policies
+create policy "Anyone can submit applications"
+  on public.tappa_applications for insert with check (true);
+
+-- Note: Reading applications requires admin access (handled via admin password in server actions)
+-- No public select policy - only admins can view via admin panel
 
 -- ============================================
 -- SEED DATA: Initial tappe
