@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { notifyOrganizerApproved, notifyOrganizerRejected } from "@/lib/email";
+import { sendEmail, notifyOrganizerApproved, notifyOrganizerRejected } from "@/lib/email";
 
 // Simple password check - uses env var
 function verifyAdmin(password: string): boolean {
@@ -159,6 +159,20 @@ export async function addTappa(formData: FormData) {
   revalidatePath("/tappe");
   revalidatePath("/");
   return { success: true };
+}
+
+/** Send a test email to the admin address to verify SES is working. */
+export async function sendTestEmail(password: string) {
+  if (!verifyAdmin(password)) {
+    return { error: "Password admin non valida." };
+  }
+  const result = await sendEmail({
+    to: "matiazoffoli@gmail.com",
+    subject: "RSHT – Test email SES",
+    html: "<p>Questa email conferma che l'invio tramite Amazon SES funziona correttamente.</p><p>Romagna Summer Hoops Tour</p>",
+  });
+  if (result.success) return { success: true };
+  return { error: result.error instanceof Error ? result.error.message : "Errore invio email." };
 }
 
 // Fetch data for admin page

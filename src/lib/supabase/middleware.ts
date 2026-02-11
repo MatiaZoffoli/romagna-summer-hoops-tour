@@ -41,10 +41,16 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Redirect logged-in users away from login/registration
+  // But allow access to reset-password pages (they need to be able to reset password)
   if (user && (request.nextUrl.pathname === "/login" || request.nextUrl.pathname === "/registrazione")) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
+  }
+
+  // Allow access to reset-password pages (they handle their own auth state)
+  if (request.nextUrl.pathname.startsWith("/reset-password")) {
+    return supabaseResponse;
   }
 
   return supabaseResponse;

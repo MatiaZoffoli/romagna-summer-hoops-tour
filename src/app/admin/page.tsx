@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Shield, Trophy, Plus, Newspaper, MapPin, Loader2, CheckCircle, Lock, FileText, X, Eye, Edit2 } from "lucide-react";
-import { addTappaResult, updateTappaStatus, addNews, addTappa, getAdminData, approveTappaApplication, rejectTappaApplication } from "@/app/actions/admin";
+import { addTappaResult, updateTappaStatus, addNews, addTappa, getAdminData, approveTappaApplication, rejectTappaApplication, sendTestEmail } from "@/app/actions/admin";
 import { sistemaPunteggio } from "@/data/placeholder";
 
 interface AdminData {
@@ -43,6 +43,7 @@ export default function AdminPage() {
   const [editingApp, setEditingApp] = useState<AdminData["applications"][0] | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectDialog, setShowRejectDialog] = useState<string | null>(null);
+  const [testingEmail, setTestingEmail] = useState(false);
 
   async function handleLogin() {
     setLoading(true);
@@ -270,6 +271,26 @@ export default function AdminPage() {
             {error}
           </div>
         )}
+
+        <div className="mb-6 flex items-center gap-4">
+          <span className="text-sm text-muted">Email (SES):</span>
+          <button
+            type="button"
+            disabled={loading || testingEmail}
+            onClick={async () => {
+              setTestingEmail(true);
+              setError("");
+              const result = await sendTestEmail(password);
+              if (result.success) showMessage("Email di test inviata! Controlla la casella matiazoffoli@gmail.com");
+              else setError(result.error ?? "Errore invio");
+              setTestingEmail(false);
+            }}
+            className="px-4 py-2 rounded-full text-sm font-medium bg-surface border border-border text-muted hover:text-foreground hover:border-primary transition-colors flex items-center gap-2 disabled:opacity-50"
+          >
+            {testingEmail ? <Loader2 size={14} className="animate-spin" /> : null}
+            Invia email di test
+          </button>
+        </div>
 
         {/* Tabs */}
         <div className="flex gap-2 mb-8 flex-wrap">

@@ -1,9 +1,30 @@
-import { Resend } from "resend";
+/**
+ * Transactional email via Amazon SES.
+ * Required env: AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
+ * SES_FROM_EMAIL (verified sender in SES, e.g. noreply@romagnasummerhoopstour.com).
+ */
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
+import { getSiteUrl } from "./site-url";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getSESClient() {
+  const region = process.env.AWS_REGION ?? "eu-south-1";
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+  if (!accessKeyId || !secretAccessKey) {
+    throw new Error(
+      "AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be set in environment variables."
+    );
+  }
+  return new SESClient({
+    region,
+    credentials: { accessKeyId, secretAccessKey },
+  });
+}
 
-const ADMIN_EMAIL = "matiazoffoli@gmail.com"; // Verified email for Resend free tier
-const FROM_EMAIL = "Romagna Summer Hoops Tour <onboarding@resend.dev>"; // Using Resend's default domain for now
+const ADMIN_EMAIL = "matiazoffoli@gmail.com";
+// Must be a verified email or domain in Amazon SES
+const FROM_EMAIL =
+  process.env.SES_FROM_EMAIL ?? "Romagna Summer Hoops Tour <noreply@romagnasummerhoopstour.com>";
 
 export async function sendEmail({
   to,
@@ -16,23 +37,37 @@ export async function sendEmail({
   html: string;
   text?: string;
 }) {
+  const textBody = text ?? html.replace(/<[^>]*>/g, "");
+
   try {
-    const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to,
-      subject,
-      html,
-      text: text || html.replace(/<[^>]*>/g, ""), // Strip HTML for text fallback
+    const ses = getSESClient();
+    const command = new SendEmailCommand({
+      Source: FROM_EMAIL,
+      Destination: {
+        ToAddresses: [to],
+      },
+      Message: {
+        Subject: {
+          Data: subject,
+          Charset: "UTF-8",
+        },
+        Body: {
+          Html: {
+            Data: html,
+            Charset: "UTF-8",
+          },
+          Text: {
+            Data: textBody,
+            Charset: "UTF-8",
+          },
+        },
+      },
     });
 
-    if (error) {
-      console.error("Resend error:", error);
-      return { success: false, error };
-    }
-
-    return { success: true, data };
+    const result = await ses.send(command);
+    return { success: true, data: result };
   } catch (error) {
-    console.error("Email send error:", error);
+    console.error("SES send error:", error);
     return { success: false, error };
   }
 }
@@ -49,20 +84,19 @@ export async function notifyAdminNewApplication(application: {
   provincia: string | null;
   descrizione: string | null;
 }) {
-  // Format date from YYYY-MM-DD to readable format
   let formattedDate = application.data_proposta;
   try {
     const date = new Date(application.data_proposta);
     if (!isNaN(date.getTime())) {
-      formattedDate = date.toLocaleDateString('it-IT', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
+      formattedDate = date.toLocaleDateString("it-IT", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
       });
     }
-  } catch (e) {
-    // Keep original format if parsing fails
+  } catch {
+    // keep original
   }
 
   const html = `
@@ -84,7 +118,7 @@ export async function notifyAdminNewApplication(application: {
         ${application.descrizione ? `<p><strong>Descrizione:</strong><br>${application.descrizione.replace(/\n/g, "<br>")}</p>` : ""}
       </div>
       
-      <p><a href="https://romagna-summer-hoops-tour.vercel.app/admin" style="background: #ff6b35; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Vai all'Admin Panel</a></p>
+      <p><a href="${getSiteUrl()}/admin" style="background: #ff6b35; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Vai all'Admin Panel</a></p>
     </div>
   `;
 
@@ -160,6 +194,92 @@ export async function notifyOrganizerRejected(application: {
   return sendEmail({
     to: application.email_organizzatore,
     subject: `Riguardo la tua candidatura - ${application.nome_torneo}`,
+    html,
+  });
+}
+
+const EMAIL_STYLES = {
+  font: "Arial, Helvetica, sans-serif",
+  primary: "#FF6B35",
+  primaryDark: "#E55A2B",
+  darkBg: "#1A1A2E",
+  darkerBg: "#0D0D0D",
+  surface: "#2A2A4A",
+  text: "#FFFFFF",
+  textMuted: "#9CA3AF",
+  radius: "12px",
+  btnPadding: "14px 28px",
+};
+
+/** Notify admin when a new team registers. */
+export async function notifyAdminNewTeam(team: {
+  nome: string;
+  email: string;
+  telefono: string | null;
+  instagram: string | null;
+  motto: string | null;
+  giocatoriCount: number;
+}) {
+  const html = `
+    <div style="font-family: ${EMAIL_STYLES.font}; max-width: 600px; margin: 0 auto; background: ${EMAIL_STYLES.darkerBg}; border-radius: ${EMAIL_STYLES.radius}; overflow: hidden;">
+      <div style="background: ${EMAIL_STYLES.darkBg}; padding: 24px 28px; border-bottom: 3px solid ${EMAIL_STYLES.primary};">
+        <h1 style="margin: 0; color: ${EMAIL_STYLES.primary}; font-size: 24px; letter-spacing: 0.05em;">ROMAGNA SUMMER HOOPS TOUR</h1>
+        <p style="margin: 8px 0 0; color: ${EMAIL_STYLES.textMuted}; font-size: 14px;">Nuova squadra registrata</p>
+      </div>
+      <div style="padding: 28px;">
+        <p style="color: ${EMAIL_STYLES.text}; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">Una nuova squadra si è iscritta al Tour.</p>
+        <div style="background: ${EMAIL_STYLES.darkBg}; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${EMAIL_STYLES.primary};">
+          <p style="margin: 0 0 12px; color: ${EMAIL_STYLES.text}; font-size: 18px; font-weight: bold;">${team.nome}</p>
+          <p style="margin: 0 0 6px; color: ${EMAIL_STYLES.textMuted}; font-size: 14px;"><strong style="color: ${EMAIL_STYLES.text};">Email:</strong> ${team.email}</p>
+          ${team.telefono ? `<p style="margin: 0 0 6px; color: ${EMAIL_STYLES.textMuted}; font-size: 14px;"><strong style="color: ${EMAIL_STYLES.text};">Telefono:</strong> ${team.telefono}</p>` : ""}
+          ${team.instagram ? `<p style="margin: 0 0 6px; color: ${EMAIL_STYLES.textMuted}; font-size: 14px;"><strong style="color: ${EMAIL_STYLES.text};">Instagram:</strong> ${team.instagram}</p>` : ""}
+          ${team.motto ? `<p style="margin: 12px 0 0; color: ${EMAIL_STYLES.textMuted}; font-size: 13px; font-style: italic;">"${team.motto}"</p>` : ""}
+          <p style="margin: 12px 0 0; color: ${EMAIL_STYLES.textMuted}; font-size: 14px;">Giocatori registrati: <strong style="color: ${EMAIL_STYLES.text};">${team.giocatoriCount}</strong></p>
+        </div>
+        <p style="margin: 24px 0 0;">
+          <a href="${getSiteUrl()}/admin" style="display: inline-block; background: ${EMAIL_STYLES.primary}; color: white; padding: ${EMAIL_STYLES.btnPadding}; text-decoration: none; border-radius: 999px; font-weight: bold; font-size: 14px;">Vai all'Admin Panel</a>
+        </p>
+      </div>
+    </div>
+  `;
+  return sendEmail({
+    to: ADMIN_EMAIL,
+    subject: `Nuova squadra registrata: ${team.nome}`,
+    html,
+  });
+}
+
+/** Welcome email sent to the team after registration. */
+export async function sendWelcomeToTeam(team: { nome: string; email: string }) {
+  const siteUrl = getSiteUrl();
+  const html = `
+    <div style="font-family: ${EMAIL_STYLES.font}; max-width: 600px; margin: 0 auto; background: ${EMAIL_STYLES.darkerBg}; border-radius: ${EMAIL_STYLES.radius}; overflow: hidden;">
+      <div style="background: ${EMAIL_STYLES.darkBg}; padding: 28px; border-bottom: 3px solid ${EMAIL_STYLES.primary}; text-align: center;">
+        <h1 style="margin: 0; color: ${EMAIL_STYLES.primary}; font-size: 26px; letter-spacing: 0.08em;">ROMAGNA SUMMER HOOPS TOUR</h1>
+        <p style="margin: 12px 0 0; color: ${EMAIL_STYLES.textMuted}; font-size: 14px;">Benvenuti nel circuito</p>
+      </div>
+      <div style="padding: 32px;">
+        <p style="color: ${EMAIL_STYLES.text}; font-size: 18px; line-height: 1.6; margin: 0 0 16px;">Ciao <strong>${team.nome}</strong>,</p>
+        <p style="color: ${EMAIL_STYLES.text}; font-size: 16px; line-height: 1.7; margin: 0 0 24px;">La vostra squadra è ufficialmente iscritta al <strong>Romagna Summer Hoops Tour</strong>. Siete pronti a far parte del circuito estivo di basket 3x3 della Romagna.</p>
+        <div style="background: ${EMAIL_STYLES.darkBg}; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid ${EMAIL_STYLES.primary};">
+          <p style="margin: 0 0 10px; color: ${EMAIL_STYLES.text}; font-size: 15px; font-weight: bold;">Cosa potete fare ora:</p>
+          <ul style="margin: 0; padding-left: 20px; color: ${EMAIL_STYLES.textMuted}; font-size: 14px; line-height: 1.8;">
+            <li>Accedere alla <strong style="color: ${EMAIL_STYLES.text};">dashboard</strong> e aggiornare il profilo della squadra</li>
+            <li>Consultare le <strong style="color: ${EMAIL_STYLES.text};">tappe</strong> e iscrivervi ai tornei contattando gli organizzatori</li>
+            <li>Seguire la <strong style="color: ${EMAIL_STYLES.text};">classifica generale</strong> e accumulare punti per The Finals</li>
+          </ul>
+        </div>
+        <p style="margin: 28px 0 24px; text-align: center;">
+          <a href="${siteUrl}/dashboard" style="display: inline-block; background: ${EMAIL_STYLES.primary}; color: white; padding: ${EMAIL_STYLES.btnPadding}; text-decoration: none; border-radius: 999px; font-weight: bold; font-size: 15px;">Vai alla Dashboard</a>
+        </p>
+        <p style="color: ${EMAIL_STYLES.textMuted}; font-size: 13px; line-height: 1.6; margin: 0;">Ci vediamo in campo. Buon Tour!</p>
+        <p style="color: ${EMAIL_STYLES.text}; font-size: 14px; margin: 16px 0 0;"><strong>Il Team del Romagna Summer Hoops Tour</strong></p>
+      </div>
+    </div>
+  `;
+  return sendEmail({
+    to: team.email,
+    subject: `Benvenuti nel Tour – ${team.nome}`,
     html,
   });
 }
