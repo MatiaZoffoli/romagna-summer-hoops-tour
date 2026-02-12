@@ -15,7 +15,7 @@ export interface Tappa {
   contattoOrganizzatore: string;
   instagram: string;
   descrizione: string;
-  stato: "prossima" | "completata" | "in-arrivo";
+  stato: "pending" | "confermata" | "in_corso" | "in_attesa_risultati" | "conclusa";
   risultati?: Risultato[];
   foto?: string[];
 }
@@ -68,7 +68,7 @@ export const tappe: Tappa[] = [
     instagram: "",
     descrizione:
       "Kings of the Ghetto - il torneo 3x3 di Cesenatico organizzato dal team Ghetto Ponente. Streetball, musica e good vibes sulla riviera.",
-    stato: "prossima",
+    stato: "confermata",
   },
   {
     id: "torneo-san-piero",
@@ -84,7 +84,7 @@ export const tappe: Tappa[] = [
     instagram: "",
     descrizione:
       "Il Torneo di San Piero entra nel circuito del Romagna Summer Hoops Tour. Un appuntamento fisso per gli appassionati del 3x3.",
-    stato: "in-arrivo",
+    stato: "confermata",
   },
 ];
 

@@ -34,18 +34,22 @@ export default async function TappaDetailPage({ params }: TappaPageProps) {
           <div className="flex items-center gap-3 mb-4">
             <span
               className={`px-3 py-1 text-xs font-semibold rounded-full border ${
-                tappa.stato === "prossima"
-                  ? "bg-primary/20 text-primary border-primary/30"
-                  : tappa.stato === "completata"
-                  ? "bg-green-500/20 text-green-400 border-green-500/30"
-                  : "bg-accent/20 text-accent border-accent/30"
+                {
+                  pending: "bg-muted/30 text-muted border-border",
+                  confermata: "bg-accent/20 text-accent border-accent/30",
+                  in_corso: "bg-primary/20 text-primary border-primary/30",
+                  in_attesa_risultati: "bg-gold/20 text-gold border-gold/30",
+                  conclusa: "bg-green-500/20 text-green-400 border-green-500/30",
+                }[tappa.stato] ?? "bg-muted/30 text-muted border-border"
               }`}
             >
-              {tappa.stato === "prossima"
-                ? "PROSSIMA TAPPA"
-                : tappa.stato === "completata"
-                ? "COMPLETATA"
-                : "IN ARRIVO"}
+              {{
+                pending: "IN ATTESA",
+                confermata: "CONFERMATA",
+                in_corso: "IN CORSO",
+                in_attesa_risultati: "IN ATTESA RISULTATI",
+                conclusa: "CONCLUSA",
+              }[tappa.stato] ?? "IN ATTESA"}
             </span>
           </div>
 

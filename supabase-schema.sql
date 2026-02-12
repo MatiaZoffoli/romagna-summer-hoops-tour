@@ -50,7 +50,7 @@ create table public.tappe (
   contatto_organizzatore text,
   instagram text,
   descrizione text,
-  stato text default 'in-arrivo' check (stato in ('prossima', 'completata', 'in-arrivo')),
+  stato text default 'confermata' check (stato in ('pending', 'confermata', 'in_corso', 'in_attesa_risultati', 'conclusa')),
   created_at timestamp with time zone default now()
 );
 
@@ -186,8 +186,8 @@ create policy "Anyone can submit applications"
 -- ============================================
 insert into public.tappe (slug, nome, nome_completo, data, orario, luogo, indirizzo, provincia, organizzatore, descrizione, stato)
 values
-  ('kotg-cesenatico', 'KOTG', 'Kings of the Ghetto - Tappa ufficiale del Romagna Summer Hoops Tour', 'Sabato 11 Luglio 2026', '16:00', 'Cesenatico', 'Cesenatico (FC)', 'Forli-Cesena', 'Ghetto Ponente', 'Kings of the Ghetto - il torneo 3x3 di Cesenatico organizzato dal team Ghetto Ponente. Streetball, musica e good vibes sulla riviera.', 'prossima'),
-  ('torneo-san-piero', 'San Piero', 'Torneo di San Piero - Tappa ufficiale del Romagna Summer Hoops Tour', 'Sabato 25 Luglio 2026', '16:00', 'San Piero', 'San Piero (FC)', 'Forli-Cesena', '', 'Il Torneo di San Piero entra nel circuito del Romagna Summer Hoops Tour. Un appuntamento fisso per gli appassionati del 3x3.', 'in-arrivo');
+  ('kotg-cesenatico', 'KOTG', 'Kings of the Ghetto - Tappa ufficiale del Romagna Summer Hoops Tour', 'Sabato 11 Luglio 2026', '16:00', 'Cesenatico', 'Cesenatico (FC)', 'Forli-Cesena', 'Ghetto Ponente', 'Kings of the Ghetto - il torneo 3x3 di Cesenatico organizzato dal team Ghetto Ponente. Streetball, musica e good vibes sulla riviera.', 'confermata'),
+  ('torneo-san-piero', 'San Piero', 'Torneo di San Piero - Tappa ufficiale del Romagna Summer Hoops Tour', 'Sabato 25 Luglio 2026', '16:00', 'San Piero', 'San Piero (FC)', 'Forli-Cesena', '', 'Il Torneo di San Piero entra nel circuito del Romagna Summer Hoops Tour. Un appuntamento fisso per gli appassionati del 3x3.', 'confermata');
 
 -- SEED DATA: Initial news
 insert into public.news (titolo, contenuto, anteprima, data)

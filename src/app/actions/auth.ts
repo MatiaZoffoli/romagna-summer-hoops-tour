@@ -65,9 +65,19 @@ export async function signup(formData: FormData) {
   try {
     serviceRoleClient = createServiceRoleClient();
   } catch (error) {
-    // If service role key is not available, try with regular client
-    // (this might work if session is available)
     serviceRoleClient = supabase;
+  }
+
+  // One team per auth user: if this user already has a team (e.g. same email registered before), redirect to dashboard
+  const { data: existingSquadra } = await serviceRoleClient
+    .from("squadre")
+    .select("id")
+    .eq("auth_user_id", authData.user.id)
+    .maybeSingle();
+
+  if (existingSquadra) {
+    // Already registered – send them to dashboard instead of failing
+    redirect("/dashboard");
   }
 
   const { data: squadra, error: squadraError } = await serviceRoleClient
@@ -84,6 +94,9 @@ export async function signup(formData: FormData) {
     .single();
 
   if (squadraError) {
+    if (squadraError.code === "23505" && squadraError.message?.includes("squadre_auth_user_id_key")) {
+      return { error: "Questa email è già associata a una squadra. Accedi per andare alla dashboard." };
+    }
     return { error: "Errore nella creazione della squadra: " + squadraError.message };
   }
 

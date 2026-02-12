@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2, Lock, CheckCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { updatePassword } from "@/app/actions/auth";
+import AckModal from "@/components/AckModal";
 
 export default function ConfirmResetPasswordPage() {
   const router = useRouter();
@@ -145,15 +146,17 @@ export default function ConfirmResetPasswordPage() {
           </p>
         </div>
 
+        <AckModal
+          open={!!error}
+          onClose={() => setError("")}
+          variant="error"
+          title="Errore"
+          message={error}
+        />
+
         {/* Form */}
         <div className="p-8 bg-surface rounded-2xl border border-border">
           <form onSubmit={handleSubmit} className="space-y-5">
-            {error && (
-              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
-                {error}
-              </div>
-            )}
-
             <div>
               <label className="block text-sm text-muted mb-2">Nuova Password</label>
               <div className="relative">

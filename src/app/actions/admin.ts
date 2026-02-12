@@ -1,8 +1,9 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { sendEmail, notifyOrganizerApproved, notifyOrganizerRejected } from "@/lib/email";
+import { generateNewsFromEvent } from "@/lib/news-llm";
 
 // Simple password check - uses env var
 function verifyAdmin(password: string): boolean {
@@ -17,7 +18,7 @@ export async function addTappaResult(formData: FormData) {
     return { error: "Password admin non valida." };
   }
 
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const tappaId = formData.get("tappaId") as string;
   const squadraId = formData.get("squadraId") as string;
   const posizione = parseInt(formData.get("posizione") as string);
@@ -41,6 +42,9 @@ export async function addTappaResult(formData: FormData) {
     return { error: "Errore: " + error.message };
   }
 
+  // Auto-set tappa to "conclusa" when results are added
+  await supabase.from("tappe").update({ stato: "conclusa" }).eq("id", tappaId);
+
   revalidatePath("/classifica");
   revalidatePath("/tappe");
   revalidatePath("/squadre");
@@ -54,7 +58,7 @@ export async function updateTappaStatus(formData: FormData) {
     return { error: "Password admin non valida." };
   }
 
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const tappaId = formData.get("tappaId") as string;
   const stato = formData.get("stato") as string;
 
@@ -78,7 +82,7 @@ export async function addNews(formData: FormData) {
     return { error: "Password admin non valida." };
   }
 
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const titolo = formData.get("titolo") as string;
   const contenuto = formData.get("contenuto") as string;
   const anteprima = formData.get("anteprima") as string;
@@ -116,7 +120,7 @@ export async function addTappa(formData: FormData) {
     return { error: "Password admin non valida." };
   }
 
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const nome = formData.get("nome") as string;
   const nomeCompleto = formData.get("nomeCompleto") as string;
   const data = formData.get("data") as string;
@@ -149,7 +153,7 @@ export async function addTappa(formData: FormData) {
     contatto_organizzatore: contattoOrganizzatore || null,
     instagram: instagram || null,
     descrizione: descrizione || null,
-    stato: stato || "in-arrivo",
+    stato: stato || "confermata",
   });
 
   if (error) {
@@ -181,7 +185,7 @@ export async function getAdminData(password: string) {
     return null;
   }
 
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const [tappeRes, squadreRes, risultatiRes, newsRes, applicationsRes] = await Promise.all([
     supabase.from("tappe").select("*").order("created_at"),
@@ -206,7 +210,7 @@ export async function approveTappaApplication(formData: FormData) {
     return { error: "Password admin non valida." };
   }
 
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const applicationId = formData.get("applicationId") as string;
 
   // Get the application
@@ -236,7 +240,7 @@ export async function approveTappaApplication(formData: FormData) {
   const contattoOrganizzatore = (formData.get("contattoOrganizzatore") as string) || application.email_organizzatore;
   const instagram = (formData.get("instagram") as string) || application.instagram_torneo || null;
   const descrizione = (formData.get("descrizione") as string) || application.descrizione || null;
-  const stato = (formData.get("stato") as string) || "in-arrivo";
+  const stato = (formData.get("stato") as string) || "confermata";
 
   // Create slug from nome
   const slug = nome.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
@@ -287,6 +291,34 @@ export async function approveTappaApplication(formData: FormData) {
     // Don't fail the approval if email fails
   }
 
+  // Auto-generate a news article for the new tappa (non-blocking)
+  try {
+    const generated = await generateNewsFromEvent("tappa_approved", {
+      nomeTappa: nome,
+      nomeCompleto: nomeCompleto ?? null,
+      luogo,
+      data,
+      organizzatore: organizzatore || null,
+    });
+    if (generated) {
+      const dataNews = new Date().toLocaleDateString("it-IT", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+      await supabase.from("news").insert({
+        titolo: generated.titolo,
+        contenuto: generated.contenuto,
+        anteprima: generated.anteprima,
+        data: dataNews,
+      });
+      revalidatePath("/news");
+      revalidatePath("/");
+    }
+  } catch (newsError) {
+    console.error("Failed to generate or insert auto-news for tappa:", newsError);
+  }
+
   revalidatePath("/admin");
   revalidatePath("/tappe");
   revalidatePath("/");
@@ -299,7 +331,7 @@ export async function rejectTappaApplication(formData: FormData) {
     return { error: "Password admin non valida." };
   }
 
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const applicationId = formData.get("applicationId") as string;
   const reason = formData.get("reason") as string;
 

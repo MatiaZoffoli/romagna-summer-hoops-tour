@@ -11,7 +11,9 @@ export default async function Home() {
     getNews(),
   ]);
 
-  const prossimaTappa = tappe.find((t) => t.stato === "prossima");
+  const prossimaTappa = tappe.find(
+    (t) => t.stato === "confermata" || t.stato === "in_corso"
+  );
   const topSquadre = [...squadre]
     .sort((a, b) => b.punti_totali - a.punti_totali)
     .slice(0, 5);

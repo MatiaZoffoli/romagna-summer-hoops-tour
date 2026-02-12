@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowLeft, MapPin, Calendar, Clock, User, Mail, Phone, Instagram, CheckCircle, Loader2, X } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Clock, User, Mail, Phone, Instagram, Loader2, CheckCircle } from "lucide-react";
 import { submitTappaApplication } from "@/app/actions/tappa-application";
+import AckModal from "@/components/AckModal";
 
 export default function DiventaTappaPage() {
   const [loading, setLoading] = useState(false);
@@ -77,46 +78,23 @@ export default function DiventaTappaPage() {
           </div>
         </div>
 
-        {/* Success Modal */}
-        {success && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-surface rounded-2xl border border-border max-w-md w-full p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
-                    <CheckCircle size={24} className="text-green-400" />
-                  </div>
-                  <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider">
-                    Domanda Inviata!
-                  </h2>
-                </div>
-                <button
-                  onClick={() => setSuccess(false)}
-                  className="p-2 hover:bg-background rounded-lg transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-              <p className="text-muted mb-6">
-                La tua candidatura è stata inviata con successo. Ti contatteremo via email entro pochi giorni lavorativi.
-              </p>
-              <button
-                onClick={() => setSuccess(false)}
-                className="w-full px-6 py-3 bg-primary text-white font-bold rounded-full hover:bg-primary-dark transition-colors"
-              >
-                Chiudi
-              </button>
-            </div>
-          </div>
-        )}
+        <AckModal
+          open={success}
+          onClose={() => setSuccess(false)}
+          variant="success"
+          title="Domanda Inviata!"
+          message="La tua candidatura è stata inviata con successo. Ti contatteremo via email entro pochi giorni lavorativi."
+        />
+        <AckModal
+          open={!!error}
+          onClose={() => setError("")}
+          variant="error"
+          title="Errore"
+          message={error}
+        />
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-8">
-          {error && (
-            <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
-              {error}
-            </div>
-          )}
 
           {/* Organizer Section */}
           <div className="p-8 bg-surface rounded-2xl border border-border">

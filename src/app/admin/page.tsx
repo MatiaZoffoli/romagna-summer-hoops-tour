@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Shield, Trophy, Plus, Newspaper, MapPin, Loader2, CheckCircle, Lock, FileText, X, Eye, Edit2 } from "lucide-react";
 import { addTappaResult, updateTappaStatus, addNews, addTappa, getAdminData, approveTappaApplication, rejectTappaApplication, sendTestEmail } from "@/app/actions/admin";
 import { sistemaPunteggio } from "@/data/placeholder";
+import AckModal from "@/components/AckModal";
 
 interface AdminData {
   tappe: { id: string; slug: string; nome: string; stato: string }[];
@@ -65,7 +66,6 @@ export default function AdminPage() {
 
   function showMessage(msg: string) {
     setMessage(msg);
-    setTimeout(() => setMessage(""), 3000);
   }
 
   async function handleAddResult(e: React.FormEvent<HTMLFormElement>) {
@@ -152,7 +152,7 @@ export default function AdminPage() {
       const contattoOrganizzatore = (e?.currentTarget?.querySelector('[name="contattoOrganizzatore"]') as HTMLInputElement)?.value || editingApp.email_organizzatore;
       const instagram = (e?.currentTarget?.querySelector('[name="instagram"]') as HTMLInputElement)?.value || editingApp.instagram_torneo || "";
       const descrizione = (e?.currentTarget?.querySelector('[name="descrizione"]') as HTMLTextAreaElement)?.value || editingApp.descrizione || "";
-      const stato = (e?.currentTarget?.querySelector('[name="stato"]') as HTMLSelectElement)?.value || "in-arrivo";
+      const stato = (e?.currentTarget?.querySelector('[name="stato"]') as HTMLSelectElement)?.value || "confermata";
       
       formData.set("nome", nome);
       formData.set("nomeCompleto", nomeCompleto);
@@ -200,6 +200,13 @@ export default function AdminPage() {
   if (!authenticated) {
     return (
       <div className="pt-24 pb-20 min-h-screen flex items-center justify-center">
+        <AckModal
+          open={!!error}
+          onClose={() => setError("")}
+          variant="error"
+          title="Accesso negato"
+          message={error}
+        />
         <div className="w-full max-w-md mx-auto px-4">
           <div className="text-center mb-8">
             <Shield size={48} className="text-primary mx-auto mb-4" />
@@ -210,11 +217,6 @@ export default function AdminPage() {
           </div>
 
           <div className="p-8 bg-surface rounded-2xl border border-border">
-            {error && (
-              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
-                {error}
-              </div>
-            )}
             <div className="space-y-4">
               <div>
                 <label className="block text-sm text-muted mb-2">Password Admin</label>
@@ -259,18 +261,20 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {message && (
-          <div className="mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm flex items-center gap-2">
-            <CheckCircle size={16} />
-            {message}
-          </div>
-        )}
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
-            {error}
-          </div>
-        )}
+        <AckModal
+          open={!!message}
+          onClose={() => setMessage("")}
+          variant="success"
+          title="Operazione completata"
+          message={message}
+        />
+        <AckModal
+          open={!!error}
+          onClose={() => setError("")}
+          variant="error"
+          title="Errore"
+          message={error}
+        />
 
         <div className="mb-6 flex items-center gap-4">
           <span className="text-sm text-muted">Email (SES):</span>
@@ -409,9 +413,11 @@ export default function AdminPage() {
                   <input type="hidden" name="tappaId" value={t.id} />
                   <span className="font-semibold text-foreground min-w-[120px]">{t.nome}</span>
                   <select name="stato" defaultValue={t.stato} className="px-3 py-2 bg-surface border border-border rounded-lg text-sm flex-1">
-                    <option value="in-arrivo">In Arrivo</option>
-                    <option value="prossima">Prossima</option>
-                    <option value="completata">Completata</option>
+                    <option value="pending">Pending</option>
+                    <option value="confermata">Confermata</option>
+                    <option value="in_corso">In corso</option>
+                    <option value="in_attesa_risultati">In attesa risultati</option>
+                    <option value="conclusa">Conclusa</option>
                   </select>
                   <button type="submit" disabled={loading} className="px-4 py-2 bg-primary text-white text-sm rounded-full hover:bg-primary-dark transition-colors disabled:opacity-50">
                     Aggiorna
@@ -472,10 +478,12 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <label className="block text-sm text-muted mb-2">Stato</label>
-                  <select name="stato" defaultValue="in-arrivo" className={inputClass}>
-                    <option value="in-arrivo">In Arrivo</option>
-                    <option value="prossima">Prossima</option>
-                    <option value="completata">Completata</option>
+                  <select name="stato" defaultValue="confermata" className={inputClass}>
+                    <option value="pending">Pending</option>
+                    <option value="confermata">Confermata</option>
+                    <option value="in_corso">In corso</option>
+                    <option value="in_attesa_risultati">In attesa risultati</option>
+                    <option value="conclusa">Conclusa</option>
                   </select>
                 </div>
               </div>
@@ -683,10 +691,12 @@ export default function AdminPage() {
                       </div>
                       <div>
                         <label className="block text-sm text-muted mb-2">Stato</label>
-                        <select name="stato" defaultValue="in-arrivo" className={inputClass}>
-                          <option value="in-arrivo">In Arrivo</option>
-                          <option value="prossima">Prossima</option>
-                          <option value="completata">Completata</option>
+                        <select name="stato" defaultValue="confermata" className={inputClass}>
+                          <option value="pending">Pending</option>
+                          <option value="confermata">Confermata</option>
+                          <option value="in_corso">In corso</option>
+                          <option value="in_attesa_risultati">In attesa risultati</option>
+                          <option value="conclusa">Conclusa</option>
                         </select>
                       </div>
                     </div>

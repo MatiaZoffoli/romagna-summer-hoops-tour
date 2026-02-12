@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Users, Plus, Trash2, Eye, EyeOff, CheckCircle, Loader2 } from "lucide-react";
+import { Users, Plus, Trash2, Eye, EyeOff, Loader2 } from "lucide-react";
 import { signup } from "@/app/actions/auth";
+import AckModal from "@/components/AckModal";
 
 interface GiocatoreForm {
   nome: string;
@@ -99,14 +100,16 @@ export default function RegistrazionePage() {
           </div>
         </div>
 
+        <AckModal
+          open={!!error}
+          onClose={() => setError("")}
+          variant="error"
+          title="Errore di registrazione"
+          message={error}
+        />
+
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-8">
-          {error && (
-            <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
-              {error}
-            </div>
-          )}
-
           {/* Team info */}
           <div className="p-8 bg-surface rounded-2xl border border-border">
             <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider mb-6">

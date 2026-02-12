@@ -7,7 +7,7 @@ export const revalidate = 60;
 export default async function ClassificaPage() {
   const { squadre: classificaOrdinata, tappe } = await getClassifica();
 
-  const tappeCompletate = tappe.filter((t) => t.stato === "completata").length;
+  const tappeCompletate = tappe.filter((t) => t.stato === "conclusa").length;
 
   // Dynamic grid columns: # + Squadra + N tappe + Tappe count + Punti
   const desktopCols = `60px 1fr repeat(${tappe.length}, 80px) 80px 100px`;

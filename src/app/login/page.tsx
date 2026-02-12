@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { LogIn, Eye, EyeOff, Loader2 } from "lucide-react";
 import { login } from "@/app/actions/auth";
+import AckModal from "@/components/AckModal";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -38,15 +39,17 @@ export default function LoginPage() {
           </p>
         </div>
 
+        <AckModal
+          open={!!error}
+          onClose={() => setError("")}
+          variant="error"
+          title="Accesso non riuscito"
+          message={error}
+        />
+
         {/* Form */}
         <div className="p-8 bg-surface rounded-2xl border border-border">
           <form onSubmit={handleSubmit} className="space-y-5">
-            {error && (
-              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
-                {error}
-              </div>
-            )}
-
             <div>
               <label className="block text-sm text-muted mb-2">Email</label>
               <input

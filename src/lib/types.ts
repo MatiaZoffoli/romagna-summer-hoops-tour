@@ -37,7 +37,7 @@ export interface DbTappa {
   contatto_organizzatore: string | null;
   instagram: string | null;
   descrizione: string | null;
-  stato: "prossima" | "completata" | "in-arrivo";
+  stato: "pending" | "confermata" | "in_corso" | "in_attesa_risultati" | "conclusa";
   created_at: string;
 }
 

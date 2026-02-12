@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Mail, Loader2, CheckCircle } from "lucide-react";
+import { Mail, Loader2 } from "lucide-react";
 import { resetPassword } from "@/app/actions/auth";
+import AckModal from "@/components/AckModal";
 
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState("");
@@ -45,33 +46,25 @@ export default function ResetPasswordPage() {
           </p>
         </div>
 
+        <AckModal
+          open={success}
+          onClose={() => setSuccess(false)}
+          variant="success"
+          title="Email Inviata!"
+          message="Controlla la tua casella email. Ti abbiamo inviato un link per reimpostare la password. Se non trovi l'email, controlla anche la cartella spam."
+          buttonLabel="Chiudi"
+        />
+        <AckModal
+          open={!!error}
+          onClose={() => setError("")}
+          variant="error"
+          title="Errore"
+          message={error}
+        />
+
         {/* Form */}
         <div className="p-8 bg-surface rounded-2xl border border-border">
-          {success ? (
-            <div className="text-center space-y-4">
-              <CheckCircle size={48} className="text-green-500 mx-auto" />
-              <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider">
-                Email Inviata!
-              </h2>
-              <p className="text-muted text-sm">
-                Controlla la tua casella email. Ti abbiamo inviato un link per reimpostare la password.
-                Se non trovi l&apos;email, controlla anche la cartella spam.
-              </p>
-              <Link
-                href="/login"
-                className="inline-block mt-4 px-6 py-3 bg-primary text-white font-bold rounded-full hover:bg-primary-dark transition-colors"
-              >
-                Torna al Login
-              </Link>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {error && (
-                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
-                  {error}
-                </div>
-              )}
-
+          <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="block text-sm text-muted mb-2">Email</label>
                 <input
@@ -98,7 +91,6 @@ export default function ResetPasswordPage() {
                 {loading ? "Invio in corso..." : "Invia Link di Reset"}
               </button>
             </form>
-          )}
 
           <div className="mt-6 text-center">
             <Link

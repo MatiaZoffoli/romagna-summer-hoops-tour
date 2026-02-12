@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { User, Edit, Trophy, MapPin, LogOut, Save, Plus, Trash2, Loader2, CheckCircle } from "lucide-react";
+import { User, Edit, Trophy, MapPin, LogOut, Save, Plus, Trash2, Loader2 } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import { updateTeamProfile } from "@/app/actions/team";
 import type { DbSquadra, DbGiocatore } from "@/lib/types";
+import AckModal from "@/components/AckModal";
 
 interface GiocatoreForm {
   nome: string;
@@ -72,7 +73,6 @@ export default function DashboardClient({
       setError(result.error);
     } else {
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
     }
     setSaving(false);
   }
@@ -128,20 +128,22 @@ export default function DashboardClient({
           </div>
         </div>
 
+        <AckModal
+          open={!!error}
+          onClose={() => setError("")}
+          variant="error"
+          title="Errore"
+          message={error}
+        />
+        <AckModal
+          open={saved}
+          onClose={() => setSaved(false)}
+          variant="success"
+          title="Modifiche salvate"
+          message="Modifiche salvate con successo!"
+        />
+
         <form onSubmit={handleSave}>
-          {error && (
-            <div className="p-4 mb-6 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
-              {error}
-            </div>
-          )}
-
-          {saved && (
-            <div className="p-4 mb-6 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm flex items-center gap-2">
-              <CheckCircle size={16} />
-              Modifiche salvate con successo!
-            </div>
-          )}
-
           {/* Edit team info */}
           <div className="p-8 bg-surface rounded-2xl border border-border mb-8">
             <div className="flex items-center gap-2 mb-6">

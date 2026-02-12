@@ -4,10 +4,12 @@ import { getTappe } from "@/lib/data";
 
 export const revalidate = 60;
 
-const statoBadge = {
-  prossima: { label: "PROSSIMA", className: "bg-primary/20 text-primary border-primary/30" },
-  completata: { label: "COMPLETATA", className: "bg-green-500/20 text-green-400 border-green-500/30" },
-  "in-arrivo": { label: "IN ARRIVO", className: "bg-accent/20 text-accent border-accent/30" },
+const statoBadge: Record<string, { label: string; className: string }> = {
+  pending: { label: "IN ATTESA", className: "bg-muted/30 text-muted border-border" },
+  confermata: { label: "CONFERMATA", className: "bg-accent/20 text-accent border-accent/30" },
+  in_corso: { label: "IN CORSO", className: "bg-primary/20 text-primary border-primary/30" },
+  in_attesa_risultati: { label: "IN ATTESA RISULTATI", className: "bg-gold/20 text-gold border-gold/30" },
+  conclusa: { label: "CONCLUSA", className: "bg-green-500/20 text-green-400 border-green-500/30" },
 };
 
 export default async function TappePage() {
@@ -33,7 +35,7 @@ export default async function TappePage() {
         {/* Tappe grid */}
         <div className="space-y-4">
           {tappe.map((tappa, i) => {
-            const badge = statoBadge[tappa.stato];
+            const badge = statoBadge[tappa.stato] ?? statoBadge.pending;
             return (
               <Link key={tappa.id} href={`/tappe/${tappa.slug}`}>
                 <div className="relative p-6 sm:p-8 bg-surface rounded-2xl border border-border hover:border-primary/40 transition-all group">
