@@ -14,6 +14,33 @@ function isSupabaseConfigured(): boolean {
 // ============================================
 // TAPPE
 // ============================================
+const VALID_STATI = ["pending", "confermata", "in_corso", "in_attesa_risultati", "conclusa"] as const;
+type Stato = (typeof VALID_STATI)[number];
+
+function normalizeStato(raw: unknown): Stato {
+  return typeof raw === "string" && VALID_STATI.includes(raw as Stato) ? (raw as Stato) : "pending";
+}
+
+function normalizeTappa(row: Record<string, unknown>): DbTappa {
+  return {
+    id: String(row?.id ?? ""),
+    slug: String(row?.slug ?? row?.id ?? ""),
+    nome: String(row?.nome ?? ""),
+    nome_completo: row?.nome_completo != null ? String(row.nome_completo) : null,
+    data: String(row?.data ?? ""),
+    orario: String(row?.orario ?? "16:00"),
+    luogo: String(row?.luogo ?? ""),
+    indirizzo: row?.indirizzo != null ? String(row.indirizzo) : null,
+    provincia: row?.provincia != null ? String(row.provincia) : null,
+    organizzatore: row?.organizzatore != null ? String(row.organizzatore) : null,
+    contatto_organizzatore: row?.contatto_organizzatore != null ? String(row.contatto_organizzatore) : null,
+    instagram: row?.instagram != null ? String(row.instagram) : null,
+    descrizione: row?.descrizione != null ? String(row.descrizione) : null,
+    stato: normalizeStato(row?.stato),
+    created_at: row?.created_at != null ? String(row.created_at) : new Date().toISOString(),
+  };
+}
+
 export async function getTappe(): Promise<DbTappa[]> {
   if (!isSupabaseConfigured()) {
     return placeholderTappe.map((t) => ({
@@ -35,14 +62,35 @@ export async function getTappe(): Promise<DbTappa[]> {
     }));
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("tappe")
-    .select("*")
-    .order("created_at", { ascending: true });
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("tappe")
+      .select("*")
+      .order("created_at", { ascending: true });
 
-  if (error || !data) return [];
-  return data;
+    if (error || !data) return [];
+    const rows = Array.isArray(data) ? data : [];
+    return rows.map((row) => normalizeTappa(row as Record<string, unknown>));
+  } catch {
+    return placeholderTappe.map((t) => ({
+      id: t.id,
+      slug: t.id,
+      nome: t.nome,
+      nome_completo: t.nomeCompleto,
+      data: t.data,
+      orario: t.orario,
+      luogo: t.luogo,
+      indirizzo: t.indirizzo,
+      provincia: t.provincia,
+      organizzatore: t.organizzatore,
+      contatto_organizzatore: t.contattoOrganizzatore,
+      instagram: t.instagram,
+      descrizione: t.descrizione,
+      stato: t.stato,
+      created_at: new Date().toISOString(),
+    }));
+  }
 }
 
 export async function getTappaBySlug(slug: string): Promise<TappaConRisultati | null> {
@@ -69,28 +117,41 @@ export async function getTappaBySlug(slug: string): Promise<TappaConRisultati | 
     };
   }
 
-  const supabase = await createClient();
-  const { data: tappa } = await supabase
-    .from("tappe")
-    .select("*")
-    .eq("slug", slug)
-    .single();
+  try {
+    const supabase = await createClient();
+    const { data: tappaRow } = await supabase
+      .from("tappe")
+      .select("*")
+      .eq("slug", slug)
+      .single();
 
-  if (!tappa) return null;
+    if (!tappaRow) return null;
 
-  const { data: risultati } = await supabase
-    .from("risultati")
-    .select("*, squadre(nome)")
-    .eq("tappa_id", tappa.id)
-    .order("posizione", { ascending: true });
+    const tappa = normalizeTappa(tappaRow as Record<string, unknown>);
 
-  return {
-    ...tappa,
-    risultati: (risultati || []).map((r: DbRisultato & { squadre: { nome: string } }) => ({
-      ...r,
-      squadra_nome: r.squadre?.nome || "Sconosciuta",
-    })),
-  };
+    const { data: risultati } = await supabase
+      .from("risultati")
+      .select("*, squadre(nome)")
+      .eq("tappa_id", tappa.id)
+      .order("posizione", { ascending: true });
+
+    const risList = Array.isArray(risultati) ? risultati : [];
+
+    return {
+      ...tappa,
+      risultati: risList.map((r: DbRisultato & { squadre?: { nome?: string } }) => ({
+        id: r.id,
+        tappa_id: r.tappa_id,
+        squadra_id: r.squadra_id,
+        posizione: r.posizione,
+        punti: r.punti,
+        created_at: r.created_at,
+        squadra_nome: r.squadre?.nome ?? "Sconosciuta",
+      })),
+    };
+  } catch {
+    return null;
+  }
 }
 
 // ============================================

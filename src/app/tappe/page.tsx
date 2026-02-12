@@ -13,7 +13,13 @@ const statoBadge: Record<string, { label: string; className: string }> = {
 };
 
 export default async function TappePage() {
-  const tappe = await getTappe();
+  let tappe: Awaited<ReturnType<typeof getTappe>> = [];
+  try {
+    tappe = await getTappe();
+  } catch {
+    tappe = [];
+  }
+  const list = Array.isArray(tappe) ? tappe : [];
 
   return (
     <div className="pt-24 pb-20">
@@ -34,7 +40,7 @@ export default async function TappePage() {
 
         {/* Tappe grid */}
         <div className="space-y-4">
-          {tappe.map((tappa, i) => {
+          {list.map((tappa, i) => {
             const badge = statoBadge[tappa.stato] ?? statoBadge.pending;
             return (
               <Link key={tappa.id} href={`/tappe/${tappa.slug}`}>
