@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Users, Plus, Trash2, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Users, Plus, Trash2, Eye, EyeOff, Loader2, CheckCircle } from "lucide-react";
 import { signup } from "@/app/actions/auth";
 import AckModal from "@/components/AckModal";
 
