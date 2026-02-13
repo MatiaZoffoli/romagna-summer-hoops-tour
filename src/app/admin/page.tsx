@@ -113,7 +113,7 @@ export default function AdminPage() {
     setError("");
     const result = await getAdminData(password);
     if (result) {
-      setData(result);
+      setData(result as AdminData);
       setAuthenticated(true);
     } else {
       setError("Password non valida.");
@@ -123,7 +123,7 @@ export default function AdminPage() {
 
   async function refreshData() {
     const result = await getAdminData(password);
-    if (result) setData(result);
+    if (result) setData(result as AdminData);
   }
 
   function showMessage(msg: string) {
