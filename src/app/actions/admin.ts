@@ -548,15 +548,20 @@ export async function approveTeamApplication(formData: FormData) {
     })
     .eq("id", applicationId);
 
+  let emailSent = false;
   try {
-    await sendWelcomeToTeam({ nome: nomeSquadra, email });
+    const emailResult = await sendWelcomeToTeam({ nome: nomeSquadra, email });
+    emailSent = emailResult?.success === true;
+    if (!emailSent) {
+      console.error("Welcome email failed:", emailResult?.error, "to:", email);
+    }
   } catch (e) {
-    console.error("Welcome email error:", e);
+    console.error("Welcome email error:", e, "to:", email);
   }
 
   revalidatePath("/admin");
   revalidatePath("/");
-  return { success: true };
+  return { success: true, emailSent };
 }
 
 export async function rejectTeamApplication(formData: FormData) {
@@ -624,6 +629,9 @@ export async function createSquadraAdmin(formData: FormData) {
   const instagram = (formData.get("instagram") as string)?.trim() || null;
   const motto = (formData.get("motto") as string)?.trim() || null;
   const adminNotes = (formData.get("admin_notes") as string)?.trim() || null;
+  const logoUrl = (formData.get("logo_url") as string)?.trim() || null;
+  const avatarIcon = (formData.get("avatar_icon") as string)?.trim() || null;
+  const avatarColor = (formData.get("avatar_color") as string)?.trim() || null;
   const giocatoriJson = formData.get("giocatori") as string;
 
   const { data: squadra, error: squadraError } = await supabase
@@ -636,6 +644,9 @@ export async function createSquadraAdmin(formData: FormData) {
       instagram,
       motto,
       admin_notes: adminNotes,
+      logo_url: logoUrl,
+      avatar_icon: avatarIcon,
+      avatar_color: avatarColor,
     })
     .select()
     .single();
@@ -689,6 +700,9 @@ export async function updateSquadraAdmin(formData: FormData) {
   const instagram = (formData.get("instagram") as string)?.trim() || null;
   const motto = (formData.get("motto") as string)?.trim() || null;
   const adminNotes = (formData.get("admin_notes") as string)?.trim() || null;
+  const logoUrl = (formData.get("logo_url") as string)?.trim() || null;
+  const avatarIcon = (formData.get("avatar_icon") as string)?.trim() || null;
+  const avatarColor = (formData.get("avatar_color") as string)?.trim() || null;
   const giocatoriJson = formData.get("giocatori") as string;
 
   const { error: updateError } = await supabase
@@ -700,6 +714,9 @@ export async function updateSquadraAdmin(formData: FormData) {
       instagram,
       motto,
       admin_notes: adminNotes,
+      logo_url: logoUrl,
+      avatar_icon: avatarIcon,
+      avatar_color: avatarColor,
     })
     .eq("id", squadraId);
 
@@ -778,7 +795,7 @@ export async function approveTeamChangeRequest(formData: FormData) {
 
   const payload = (formData.get("payload") as string)
     ? JSON.parse(formData.get("payload") as string)
-    : (req.payload as { nome?: string; motto?: string; instagram?: string; telefono?: string; giocatori?: { nome: string; cognome: string; ruolo?: string; instagram?: string }[] });
+    : (req.payload as { nome?: string; motto?: string; instagram?: string; telefono?: string; logo_url?: string | null; avatar_icon?: string | null; avatar_color?: string | null; giocatori?: { nome: string; cognome: string; ruolo?: string; instagram?: string }[] });
 
   const nome = payload.nome ?? req.payload?.nome;
   if (!nome) return { error: "Nome squadra obbligatorio." };
@@ -790,6 +807,9 @@ export async function approveTeamChangeRequest(formData: FormData) {
       motto: payload.motto ?? null,
       instagram: payload.instagram ?? null,
       telefono: payload.telefono ?? null,
+      logo_url: payload.logo_url ?? null,
+      avatar_icon: payload.avatar_icon ?? null,
+      avatar_color: payload.avatar_color ?? null,
     })
     .eq("id", req.squadra_id);
 

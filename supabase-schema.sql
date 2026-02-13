@@ -18,6 +18,11 @@ create table public.squadre (
   email text,
   telefono text,
   admin_notes text,
+  logo_url text,
+  avatar_icon text,
+  avatar_color text,
+  generated_logo_url text,
+  logo_generated_at timestamp with time zone,
   created_at timestamp with time zone default now()
 );
 

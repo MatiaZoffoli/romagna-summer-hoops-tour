@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Users, ArrowRight, Instagram, Trophy } from "lucide-react";
 import { getSquadreConPunti } from "@/lib/data";
+import TeamAvatar from "@/components/TeamAvatar";
 
 export const revalidate = 60;
 
@@ -38,11 +39,8 @@ export default async function SquadrePage() {
           {squadre.map((sq) => (
             <Link key={sq.id} href={`/squadre/${sq.id}`}>
               <div className="p-6 bg-surface rounded-2xl border border-border hover:border-primary/40 transition-all group h-full">
-                {/* Team avatar placeholder */}
-                <div className="w-16 h-16 bg-primary/10 border border-primary/30 rounded-xl flex items-center justify-center mb-4">
-                  <span className="font-[family-name:var(--font-bebas)] text-2xl text-primary">
-                    {sq.nome.substring(0, 2).toUpperCase()}
-                  </span>
+                <div className="mb-4">
+                  <TeamAvatar squadra={sq} size="sm" />
                 </div>
 
                 <h3 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider group-hover:text-primary transition-colors mb-1">

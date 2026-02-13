@@ -29,6 +29,9 @@ export async function submitTeamChangeRequest(formData: FormData) {
   const motto = (formData.get("motto") as string)?.trim() || null;
   const instagram = (formData.get("instagram") as string)?.trim() || null;
   const telefono = (formData.get("telefono") as string)?.trim() || null;
+  const logoUrl = (formData.get("logo_url") as string)?.trim() || null;
+  const avatarIcon = (formData.get("avatar_icon") as string)?.trim() || null;
+  const avatarColor = (formData.get("avatar_color") as string)?.trim() || null;
   const giocatoriJson = formData.get("giocatori") as string;
 
   if (!nome) {
@@ -49,6 +52,9 @@ export async function submitTeamChangeRequest(formData: FormData) {
     motto,
     instagram,
     telefono,
+    logo_url: logoUrl,
+    avatar_icon: avatarIcon,
+    avatar_color: avatarColor,
     giocatori: giocatori.filter((g) => g.nome?.trim() && g.cognome?.trim()),
   };
 

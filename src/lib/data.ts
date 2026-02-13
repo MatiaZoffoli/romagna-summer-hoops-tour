@@ -197,6 +197,11 @@ export async function getSquadreConPunti(): Promise<SquadraConPunti[]> {
         email: "",
         telefono: null,
         admin_notes: null,
+        logo_url: null,
+        avatar_icon: null,
+        avatar_color: null,
+        generated_logo_url: null,
+        logo_generated_at: null,
         created_at: new Date().toISOString(),
         giocatori: s.giocatori.map((g) => ({
           id: "",

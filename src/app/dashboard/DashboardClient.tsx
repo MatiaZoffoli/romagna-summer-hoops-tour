@@ -1,12 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { User, Edit, Trophy, MapPin, LogOut, Save, Plus, Trash2, Loader2 } from "lucide-react";
+import { User, Edit, Trophy, MapPin, LogOut, Save, Plus, Trash2, Loader2, ImageIcon } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import { submitTeamChangeRequest } from "@/app/actions/team-change-request";
+import { generateTeamLogo } from "@/app/actions/generate-team-logo";
+import { setTeamLogoChoice } from "@/app/actions/set-team-logo-choice";
 import type { DbSquadra, DbGiocatore } from "@/lib/types";
 import AckModal from "@/components/AckModal";
+import TeamAvatar from "@/components/TeamAvatar";
+import { AVATAR_ICON_OPTIONS, AVATAR_COLOR_OPTIONS } from "@/lib/avatar-presets";
 
 interface GiocatoreForm {
   nome: string;
@@ -39,6 +44,11 @@ export default function DashboardClient({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [generatingLogo, setGeneratingLogo] = useState(false);
+  const [logoProgress, setLogoProgress] = useState(0);
+  const [showChooseLogo, setShowChooseLogo] = useState(false);
+  const [generatedLogoUrl, setGeneratedLogoUrl] = useState<string | null>(null);
+  const router = useRouter();
 
   const addGiocatore = () => {
     if (giocatori.length < 8) {
@@ -63,18 +73,64 @@ export default function DashboardClient({
     setError("");
     setSaved(false);
     setSaving(true);
-
-    const formData = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const formData = new FormData(form);
     formData.set("giocatori", JSON.stringify(giocatori));
 
     const result = await submitTeamChangeRequest(formData);
 
     if (result?.error) {
       setError(result.error);
-    } else {
-      setSaved(true);
+      setSaving(false);
+      return;
     }
+    setSaved(true);
     setSaving(false);
+
+    if (!squadra.logo_generated_at) {
+      setGeneratingLogo(true);
+      setLogoProgress(0);
+      const interval = setInterval(() => {
+        setLogoProgress((p) => Math.min(p + 12, 90));
+      }, 800);
+      const nome = (form.querySelector('[name="nome"]') as HTMLInputElement)?.value?.trim() || squadra.nome;
+      const motto = (form.querySelector('[name="motto"]') as HTMLInputElement)?.value?.trim() || squadra.motto || null;
+      const genResult = await generateTeamLogo({ nome, motto: motto || undefined });
+      clearInterval(interval);
+      setLogoProgress(100);
+      setGeneratingLogo(false);
+      if (genResult?.error) {
+        setError(genResult.error);
+        return;
+      }
+      if (genResult && "generated_logo_url" in genResult && genResult.generated_logo_url) {
+        setGeneratedLogoUrl(genResult.generated_logo_url);
+        setShowChooseLogo(true);
+      }
+      router.refresh();
+    }
+  }
+
+  async function handleLogoChoice(choice: string, form?: HTMLFormElement) {
+    const formData = new FormData();
+    formData.set("choice", choice);
+    if (choice === "url" && form) {
+      const url = (form.querySelector('[name="logo_url"]') as HTMLInputElement)?.value?.trim();
+      if (url) formData.set("logo_url", url);
+    }
+    if (choice === "preset" && form) {
+      const icon = (form.querySelector('[name="avatar_icon"]') as HTMLSelectElement)?.value;
+      const color = (form.querySelector('[name="avatar_color"]') as HTMLSelectElement)?.value;
+      if (icon) formData.set("avatar_icon", icon);
+      if (color) formData.set("avatar_color", color);
+    }
+    const result = await setTeamLogoChoice(formData);
+    if (result?.error) setError(result.error);
+    else {
+      setShowChooseLogo(false);
+      setGeneratedLogoUrl(null);
+      router.refresh();
+    }
   }
 
   const slug = squadra.nome.toLowerCase().replace(/\s+/g, "-");
@@ -143,7 +199,7 @@ export default function DashboardClient({
           message="La tua richiesta di modifica è stata inviata. Riceverai un esito dopo la revisione da parte dell'organizzazione."
         />
 
-        <form onSubmit={handleSave}>
+        <form id="dashboard-profile-form" onSubmit={handleSave}>
           {/* Edit team info */}
           <div className="p-8 bg-surface rounded-2xl border border-border mb-8">
             <div className="flex items-center gap-2 mb-6">
@@ -193,6 +249,54 @@ export default function DashboardClient({
                     defaultValue={squadra.telefono || ""}
                     className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground focus:outline-none focus:border-primary transition-colors"
                   />
+                </div>
+              </div>
+
+              {/* Logo / avatar personalisation */}
+              <div className="pt-6 border-t border-border">
+                <h3 className="font-[family-name:var(--font-bebas)] text-lg tracking-wider mb-4">Personalizza quadrato squadra</h3>
+                <div className="flex flex-wrap items-start gap-6">
+                  <TeamAvatar squadra={squadra} size="md" />
+                  <div className="flex-1 min-w-0 space-y-4">
+                    <div>
+                      <label className="block text-sm text-muted mb-2">URL immagine squadra (opzionale)</label>
+                      <input
+                        name="logo_url"
+                        type="url"
+                        placeholder="https://..."
+                        defaultValue={squadra.logo_url || ""}
+                        className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground focus:outline-none focus:border-primary transition-colors"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-muted mb-2">Icona (se non usi immagine)</label>
+                        <select
+                          name="avatar_icon"
+                          defaultValue={squadra.avatar_icon || ""}
+                          className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground focus:outline-none focus:border-primary transition-colors"
+                        >
+                          <option value="">Nessuna</option>
+                          {AVATAR_ICON_OPTIONS.map((o) => (
+                            <option key={o.id} value={o.id}>{o.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm text-muted mb-2">Colore sfondo</label>
+                        <select
+                          name="avatar_color"
+                          defaultValue={squadra.avatar_color || ""}
+                          className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground focus:outline-none focus:border-primary transition-colors"
+                        >
+                          <option value="">Predefinito</option>
+                          {AVATAR_COLOR_OPTIONS.map((o) => (
+                            <option key={o.id} value={o.id}>{o.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -286,6 +390,57 @@ export default function DashboardClient({
             {saving ? "Invio in corso..." : "Richiedi modifica"}
           </button>
         </form>
+
+        {/* Generating logo overlay */}
+        {generatingLogo && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-surface rounded-2xl border border-border max-w-md w-full p-8 text-center">
+              <Loader2 size={48} className="mx-auto mb-4 text-primary animate-spin" />
+              <p className="font-[family-name:var(--font-bebas)] text-xl tracking-wider mb-2">Stiamo creando la tua immagine</p>
+              <p className="text-sm text-muted mb-6">Attendere prego...</p>
+              <div className="h-2 bg-background rounded-full overflow-hidden">
+                <div className="h-full bg-primary transition-all duration-300" style={{ width: `${logoProgress}%` }} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Choose your logo modal */}
+        {showChooseLogo && (generatedLogoUrl || squadra.generated_logo_url) && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-surface rounded-2xl border border-border max-w-2xl w-full my-8 p-6">
+              <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider mb-4">Scegli il tuo logo</h2>
+              <p className="text-sm text-muted mb-6">Scegli come mostrare il quadrato della squadra sul sito.</p>
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <button type="button" onClick={() => handleLogoChoice("generated")} className="p-4 rounded-xl border-2 border-primary bg-primary/5 hover:bg-primary/10 transition-colors text-left">
+                  <div className="w-20 h-20 rounded-xl overflow-hidden mb-3 border border-border">
+                    <img src={generatedLogoUrl || squadra.generated_logo_url || ""} alt="Generata" className="w-full h-full object-cover" />
+                  </div>
+                  <span className="font-medium">Usa immagine generata</span>
+                </button>
+                <button type="button" onClick={() => handleLogoChoice("url", document.getElementById("dashboard-profile-form") as HTMLFormElement)} className="p-4 rounded-xl border border-border hover:border-primary/50 transition-colors text-left">
+                  <div className="w-20 h-20 rounded-xl bg-background border border-border flex items-center justify-center mb-3">
+                    <ImageIcon size={32} className="text-muted" />
+                  </div>
+                  <span className="font-medium">Usa il mio URL</span>
+                </button>
+                <button type="button" onClick={() => handleLogoChoice("preset", document.getElementById("dashboard-profile-form") as HTMLFormElement)} className="p-4 rounded-xl border border-border hover:border-primary/50 transition-colors text-left col-span-2">
+                  <div className="flex items-center gap-3">
+                    <TeamAvatar squadra={{ ...squadra, logo_url: null, avatar_icon: (document.querySelector('#dashboard-profile-form [name="avatar_icon"]') as HTMLSelectElement)?.value || null, avatar_color: (document.querySelector('#dashboard-profile-form [name="avatar_color"]') as HTMLSelectElement)?.value || null }} size="md" />
+                    <span className="font-medium">Usa icona e colore selezionati</span>
+                  </div>
+                </button>
+                <button type="button" onClick={() => handleLogoChoice("identicon")} className="p-4 rounded-xl border border-border hover:border-primary/50 transition-colors text-left col-span-2">
+                  <div className="flex items-center gap-3">
+                    <TeamAvatar squadra={{ ...squadra, logo_url: null, avatar_icon: null, avatar_color: null }} size="md" />
+                    <span className="font-medium">Usa avatar predefinito</span>
+                  </div>
+                </button>
+              </div>
+              <button type="button" onClick={() => { setShowChooseLogo(false); setGeneratedLogoUrl(null); router.refresh(); }} className="text-sm text-muted hover:text-foreground">Scegli più tardi</button>
+            </div>
+          </div>
+        )}
 
         {/* View public profile */}
         <p className="text-sm text-muted text-center mt-6">

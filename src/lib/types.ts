@@ -11,6 +11,11 @@ export interface DbSquadra {
   email: string | null;
   telefono: string | null;
   admin_notes: string | null;
+  logo_url: string | null;
+  avatar_icon: string | null;
+  avatar_color: string | null;
+  generated_logo_url: string | null;
+  logo_generated_at: string | null;
   created_at: string;
 }
 

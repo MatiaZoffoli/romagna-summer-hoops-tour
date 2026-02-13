@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Users, Trophy, Instagram, User } from "lucide-react";
 import { getSquadraBySlug, getTappe } from "@/lib/data";
+import TeamAvatar from "@/components/TeamAvatar";
 
 export const revalidate = 60;
 
@@ -34,11 +35,7 @@ export default async function SquadraDetailPage({ params }: SquadraPageProps) {
 
         {/* Header */}
         <div className="flex items-start gap-6 mb-10">
-          <div className="w-20 h-20 bg-primary/10 border border-primary/30 rounded-xl flex items-center justify-center shrink-0">
-            <span className="font-[family-name:var(--font-bebas)] text-3xl text-primary">
-              {squadra.nome.substring(0, 2).toUpperCase()}
-            </span>
-          </div>
+          <TeamAvatar squadra={squadra} size="md" />
           <div>
             <h1 className="font-[family-name:var(--font-bebas)] text-5xl sm:text-6xl tracking-wider mb-2">
               {squadra.nome}

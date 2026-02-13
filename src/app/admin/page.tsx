@@ -5,6 +5,7 @@ import { Shield, Trophy, Plus, Newspaper, MapPin, Loader2, CheckCircle, Lock, Fi
 import { addTappaResult, updateTappaStatus, addNews, addTappa, getAdminData, approveTappaApplication, rejectTappaApplication, approveTeamApplication, rejectTeamApplication, createSquadraAdmin, updateSquadraAdmin, deleteRisultatoAdmin, approveTeamChangeRequest, rejectTeamChangeRequest, sendTestEmail } from "@/app/actions/admin";
 import { sistemaPunteggio } from "@/data/placeholder";
 import AckModal from "@/components/AckModal";
+import { AVATAR_ICON_OPTIONS, AVATAR_COLOR_OPTIONS } from "@/lib/avatar-presets";
 
 function NewsCaptionRow({ id, titolo, instagramCaption }: { id: string; titolo: string; instagramCaption: string | null }) {
   const [copied, setCopied] = useState(false);
@@ -48,6 +49,9 @@ interface AdminData {
     motto: string | null;
     auth_user_id: string | null;
     admin_notes: string | null;
+    logo_url?: string | null;
+    avatar_icon?: string | null;
+    avatar_color?: string | null;
     giocatori?: { id: string; nome: string; cognome: string; ruolo: string | null; instagram: string | null }[];
   }[];
   risultati: { id: string; posizione: number; punti: number; tappa_id: string; squadra_id: string; tappe: { nome: string }; squadre: { nome: string } }[];
@@ -276,7 +280,11 @@ export default function AdminPage() {
     const result = await approveTeamApplication(formData);
     if (result.error) setError(result.error);
     else {
-      showMessage("Squadra approvata!");
+      showMessage(
+        result.emailSent === false
+          ? "Squadra approvata. Attenzione: l'email di benvenuto non è stata inviata (controlla configurazione SES o indirizzo)."
+          : "Squadra approvata!"
+      );
       setEditingTeamApp(null);
       await refreshData();
     }
@@ -1469,6 +1477,11 @@ export default function AdminPage() {
                     <div><label className="block text-sm text-muted mb-2">Instagram</label><input name="instagram" className={inputClass} /></div>
                     <div><label className="block text-sm text-muted mb-2">Motto</label><input name="motto" className={inputClass} /></div>
                     <div><label className="block text-sm text-muted mb-2">Note admin</label><input name="admin_notes" className={inputClass} /></div>
+                    <div><label className="block text-sm text-muted mb-2">URL logo</label><input name="logo_url" type="url" placeholder="https://..." className={inputClass} /></div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div><label className="block text-sm text-muted mb-2">Icona avatar</label><select name="avatar_icon" className={inputClass}><option value="">Nessuna</option>{AVATAR_ICON_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</select></div>
+                      <div><label className="block text-sm text-muted mb-2">Colore avatar</label><select name="avatar_color" className={inputClass}><option value="">Predefinito</option>{AVATAR_COLOR_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</select></div>
+                    </div>
                     <div><label className="block text-sm text-muted mb-2">Giocatori (JSON opzionale)</label><textarea name="giocatori" rows={6} placeholder='[{"nome":"","cognome":"","ruolo":"","instagram":""}]' className={inputClass} /></div>
                     <div className="flex gap-3">
                       <button type="submit" disabled={loading} className="px-4 py-2 bg-green-500 text-white text-sm rounded-full hover:bg-green-600 disabled:opacity-50 flex items-center gap-2">{loading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />} Crea</button>
@@ -1501,6 +1514,11 @@ export default function AdminPage() {
                     <div><label className="block text-sm text-muted mb-2">Instagram</label><input name="instagram" defaultValue={editingSquadra.instagram ?? ""} className={inputClass} /></div>
                     <div><label className="block text-sm text-muted mb-2">Motto</label><input name="motto" defaultValue={editingSquadra.motto ?? ""} className={inputClass} /></div>
                     <div><label className="block text-sm text-muted mb-2">Note admin</label><input name="admin_notes" defaultValue={editingSquadra.admin_notes ?? ""} className={inputClass} /></div>
+                    <div><label className="block text-sm text-muted mb-2">URL logo</label><input name="logo_url" type="url" defaultValue={editingSquadra.logo_url ?? ""} placeholder="https://..." className={inputClass} /></div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div><label className="block text-sm text-muted mb-2">Icona avatar</label><select name="avatar_icon" className={inputClass} defaultValue={editingSquadra.avatar_icon ?? ""}><option value="">Nessuna</option>{AVATAR_ICON_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</select></div>
+                      <div><label className="block text-sm text-muted mb-2">Colore avatar</label><select name="avatar_color" className={inputClass} defaultValue={editingSquadra.avatar_color ?? ""}><option value="">Predefinito</option>{AVATAR_COLOR_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</select></div>
+                    </div>
                     <div><label className="block text-sm text-muted mb-2">Giocatori (JSON)</label><textarea name="giocatori" rows={8} defaultValue={JSON.stringify(editingSquadra.giocatori ?? [], null, 2)} className={inputClass} /></div>
                     <div className="border-t border-border pt-4">
                       <p className="text-xs text-muted mb-2">Risultati</p>
