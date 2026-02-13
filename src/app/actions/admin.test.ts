@@ -1,3 +1,13 @@
+/**
+ * Admin actions tests.
+ *
+ * Manual testing for dynamic news + Instagram draft:
+ * 1. Run DB migration: supabase-migrate-news-dynamic.sql in Supabase SQL Editor.
+ * 2. Log in to /admin, open "News" tab.
+ * 3. Publish a news with only required fields → check /news and homepage.
+ * 4. Publish a news with Image URL (e.g. https://picsum.photos/800/450) and Instagram caption → check image on /news and homepage; in admin, use "Copia caption" and paste elsewhere to verify.
+ * 5. Leave image/caption empty and submit → should still succeed (optional fields null).
+ */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   updateTappaStatus,
@@ -119,6 +129,65 @@ describe("admin actions", () => {
 
       const result = await addNews(formData);
       expect(result).toEqual({ error: "Tutti i campi sono obbligatori." });
+    });
+
+    it("returns success and inserts with null image_url and instagram_caption when optional fields omitted", async () => {
+      const formData = new FormData();
+      formData.set("adminPassword", adminPassword);
+      formData.set("titolo", "Test title");
+      formData.set("contenuto", "Test content");
+      formData.set("anteprima", "Test preview");
+
+      const result = await addNews(formData);
+      expect(result).toEqual({ success: true });
+      expect(mockSupabaseChain.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          titolo: "Test title",
+          contenuto: "Test content",
+          anteprima: "Test preview",
+          image_url: null,
+          instagram_caption: null,
+        })
+      );
+    });
+
+    it("returns success and inserts image_url and instagram_caption when provided", async () => {
+      const formData = new FormData();
+      formData.set("adminPassword", adminPassword);
+      formData.set("titolo", "News with media");
+      formData.set("contenuto", "Content");
+      formData.set("anteprima", "Preview");
+      formData.set("image_url", "https://example.com/photo.jpg");
+      formData.set("instagram_caption", "Check out our latest update! #RomagnaHoops");
+
+      const result = await addNews(formData);
+      expect(result).toEqual({ success: true });
+      expect(mockSupabaseChain.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          titolo: "News with media",
+          image_url: "https://example.com/photo.jpg",
+          instagram_caption: "Check out our latest update! #RomagnaHoops",
+        })
+      );
+    });
+
+    it("trims and omits empty optional fields as null", async () => {
+      const formData = new FormData();
+      formData.set("adminPassword", adminPassword);
+      formData.set("titolo", "Title");
+      formData.set("contenuto", "Content");
+      formData.set("anteprima", "Preview");
+      formData.set("image_url", "   ");
+      formData.set("instagram_caption", "");
+
+      const result = await addNews(formData);
+      expect(result).toEqual({ success: true });
+      expect(mockSupabaseChain.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          image_url: null,
+          instagram_caption: null,
+        })
+      );
     });
   });
 

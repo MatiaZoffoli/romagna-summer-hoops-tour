@@ -154,62 +154,91 @@ export async function getTappaBySlug(slug: string): Promise<TappaConRisultati | 
   }
 }
 
+// Bonus costanza: 10 punti per ogni tappa consecutiva (serie) disputata.
+// Es: 2 tappe di fila = 10*2 = 20 pt bonus, 3 di fila = 10*3 = 30 pt.
+function longestConsecutiveStreak(orderedTappaIds: string[], teamTappaIds: string[]): number {
+  if (teamTappaIds.length === 0) return 0;
+  const indexOf = (id: string) => orderedTappaIds.indexOf(id);
+  const indices = teamTappaIds.map(indexOf).filter((i) => i >= 0);
+  if (indices.length === 0) return 0;
+  indices.sort((a, b) => a - b);
+  let maxRun = 1;
+  let currentRun = 1;
+  for (let i = 1; i < indices.length; i++) {
+    if (indices[i] === indices[i - 1] + 1) {
+      currentRun++;
+    } else {
+      maxRun = Math.max(maxRun, currentRun);
+      currentRun = 1;
+    }
+  }
+  return Math.max(maxRun, currentRun);
+}
+
+const BONUS_PER_TAPPA_SERIE = 10;
+
 // ============================================
 // SQUADRE
 // ============================================
 export async function getSquadreConPunti(): Promise<SquadraConPunti[]> {
   if (!isSupabaseConfigured()) {
-    return placeholderSquadre.map((s) => ({
-      id: s.id,
-      auth_user_id: "",
-      nome: s.nome,
-      motto: s.motto || null,
-      instagram: s.instagram || null,
-      email: "",
-      telefono: null,
-      created_at: new Date().toISOString(),
-      giocatori: s.giocatori.map((g) => ({
-        id: "",
-        squadra_id: s.id,
-        nome: g.nome,
-        cognome: g.cognome,
-        ruolo: g.ruolo || null,
-        instagram: g.instagram || null,
+    const orderedTappaIds = placeholderTappe.map((t) => t.id);
+    return placeholderSquadre.map((s) => {
+      const teamTappaIds = s.risultatiPerTappa.map((r) => r.tappaId);
+      const streak = longestConsecutiveStreak(orderedTappaIds, teamTappaIds);
+      const puntiBase = s.risultatiPerTappa.reduce((sum, r) => sum + r.punti, 0);
+      const bonus = streak * BONUS_PER_TAPPA_SERIE;
+      return {
+        id: s.id,
+        auth_user_id: "",
+        nome: s.nome,
+        motto: s.motto || null,
+        instagram: s.instagram || null,
+        email: "",
+        telefono: null,
         created_at: new Date().toISOString(),
-      })),
-      punti_totali: s.puntiTotali,
-      tappe_giocate: s.tappeGiocate,
-      risultati: [],
-    }));
+        giocatori: s.giocatori.map((g) => ({
+          id: "",
+          squadra_id: s.id,
+          nome: g.nome,
+          cognome: g.cognome,
+          ruolo: g.ruolo || null,
+          instagram: g.instagram || null,
+          created_at: new Date().toISOString(),
+        })),
+        punti_totali: puntiBase + bonus,
+        tappe_giocate: s.tappeGiocate,
+        risultati: [],
+      };
+    });
   }
 
   const supabase = await createClient();
 
-  const { data: squadre } = await supabase
-    .from("squadre")
-    .select("*, giocatori(*)")
-    .order("nome", { ascending: true });
+  const [squadreRes, risultatiRes, tappeRes] = await Promise.all([
+    supabase.from("squadre").select("*, giocatori(*)").order("nome", { ascending: true }),
+    supabase.from("risultati").select("*, tappe(slug)"),
+    supabase.from("tappe").select("id").order("created_at", { ascending: true }),
+  ]);
 
+  const squadre = squadreRes.data;
   if (!squadre) return [];
 
-  const { data: risultati } = await supabase
-    .from("risultati")
-    .select("*, tappe(slug)");
-
-  const BONUS_COSTANZA = 5;
+  const risultati = risultatiRes.data || [];
+  const tappeOrdered = tappeRes.data || [];
+  const orderedTappaIds = tappeOrdered.map((t: { id: string }) => t.id);
 
   return squadre.map((s: DbSquadra & { giocatori: DbGiocatore[] }) => {
-    const teamResults = (risultati || []).filter(
-      (r: DbRisultato) => r.squadra_id === s.id
-    );
-    const tappeGiocate = teamResults.length;
+    const teamResults = risultati.filter((r: DbRisultato) => r.squadra_id === s.id);
+    const teamTappaIds = teamResults.map((r: DbRisultato) => r.tappa_id);
+    const streak = longestConsecutiveStreak(orderedTappaIds, teamTappaIds);
     const puntiBase = teamResults.reduce((sum: number, r: DbRisultato) => sum + r.punti, 0);
-    const bonus = tappeGiocate > 1 ? (tappeGiocate - 1) * BONUS_COSTANZA : 0;
+    const bonus = streak * BONUS_PER_TAPPA_SERIE;
 
     return {
       ...s,
       punti_totali: puntiBase + bonus,
-      tappe_giocate: tappeGiocate,
+      tappe_giocate: teamResults.length,
       risultati: teamResults.map((r: DbRisultato & { tappe: { slug: string } }) => ({
         ...r,
         tappa_slug: r.tappe?.slug || "",
@@ -266,11 +295,29 @@ export async function getClassifica() {
   const squadre = await getSquadreConPunti();
   const tappe = await getTappe();
 
-  const classificaOrdinata = [...squadre].sort(
-    (a, b) => b.punti_totali - a.punti_totali
-  );
+  const lastTappaId = tappe.length > 0 ? tappe[tappe.length - 1].id : null;
+  const classificaOrdinata = [...squadre].sort((a, b) => {
+    if (b.punti_totali !== a.punti_totali) return b.punti_totali - a.punti_totali;
+    if (b.tappe_giocate !== a.tappe_giocate) return b.tappe_giocate - a.tappe_giocate;
+    const avgPos = (s: SquadraConPunti) =>
+      s.risultati?.length ? s.risultati.reduce((s, r) => s + (r.posizione ?? 0), 0) / s.risultati.length : 999;
+    if (avgPos(a) !== avgPos(b)) return avgPos(a) - avgPos(b);
+    const lastPos = (s: SquadraConPunti) =>
+      lastTappaId && s.risultati ? (s.risultati.find((r) => r.tappa_id === lastTappaId)?.posizione ?? 999) : 999;
+    return lastPos(a) - lastPos(b);
+  });
 
-  return { squadre: classificaOrdinata, tappe };
+  // Main table: only teams with at least 2 tappe (qualification rule)
+  const squadreQualificate = classificaOrdinata.filter((s) => s.tappe_giocate >= 2);
+  const squadreConUnaTappa = classificaOrdinata.filter((s) => s.tappe_giocate === 1);
+  const squadreSenzaRisultati = classificaOrdinata.filter((s) => s.tappe_giocate === 0);
+
+  return {
+    squadre: squadreQualificate,
+    squadreConUnaTappa,
+    squadreSenzaRisultati,
+    tappe,
+  };
 }
 
 // Re-export static data that doesn't need Supabase

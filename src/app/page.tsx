@@ -180,7 +180,7 @@ export default async function Home() {
               {
                 step: "02",
                 title: "ACCUMULA PUNTI",
-                desc: "Ogni piazzamento assegna punti. Più tappe giochi, più punti accumuli con il bonus costanza.",
+                desc: "Ogni piazzamento assegna punti. Le serie di tappe consecutive danno bonus: 10 pt × numero di tappe di fila (es. 2 di fila = 20 pt, 3 = 30 pt).",
                 icon: Star,
               },
               {

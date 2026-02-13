@@ -5,7 +5,7 @@ import { getClassifica } from "@/lib/data";
 export const revalidate = 60;
 
 export default async function ClassificaPage() {
-  const { squadre: classificaOrdinata, tappe } = await getClassifica();
+  const { squadre: classificaOrdinata, squadreConUnaTappa, tappe } = await getClassifica();
 
   const tappeCompletate = tappe.filter((t) => t.stato === "conclusa").length;
 
@@ -36,7 +36,7 @@ export default async function ClassificaPage() {
             <p className="font-[family-name:var(--font-bebas)] text-3xl text-primary">
               {classificaOrdinata.length}
             </p>
-            <p className="text-xs text-muted uppercase tracking-wider">Squadre</p>
+            <p className="text-xs text-muted uppercase tracking-wider">Squadre (≥2 tappe)</p>
           </div>
           <div className="p-4 bg-surface rounded-xl border border-border text-center">
             <p className="font-[family-name:var(--font-bebas)] text-3xl text-accent">
@@ -195,7 +195,7 @@ export default async function ClassificaPage() {
               <Link href="/finals" className="text-primary hover:text-gold transition-colors">
                 The Finals
               </Link>
-              . E&apos; necessario aver partecipato ad almeno 2 tappe.
+              . In classifica figurano solo le squadre con almeno 2 tappe disputate.
             </p>
             <p className="mt-1">
               In caso di parita&apos;: 1) piu&apos; tappe disputate, 2) miglior piazzamento medio,
@@ -203,6 +203,24 @@ export default async function ClassificaPage() {
             </p>
           </div>
         </div>
+
+        {/* Squadre con 1 tappa (non in classifica) */}
+        {squadreConUnaTappa.length > 0 && (
+          <div className="mt-8 p-6 bg-surface rounded-2xl border border-border">
+            <h2 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider text-muted mb-4">Squadre con 1 tappa</h2>
+            <p className="text-sm text-muted mb-4">Queste squadre hanno disputato una sola tappa e non figurano ancora in classifica. Partecipando ad almeno un&apos;altra tappa entreranno in graduatoria.</p>
+            <ul className="space-y-2">
+              {squadreConUnaTappa.map((sq) => (
+                <li key={sq.id}>
+                  <Link href={`/squadre/${sq.id}`} className="text-primary hover:text-gold transition-colors">
+                    {sq.nome}
+                  </Link>
+                  <span className="text-muted text-sm ml-2">— {sq.tappe_giocate} tappa, {sq.punti_totali} pt</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -215,9 +215,9 @@ export default function IlTourPage() {
                 </h3>
               </div>
               <p className="text-muted text-sm leading-relaxed">
-                Per ogni tappa disputata dopo la prima, la squadra riceve{" "}
-                <span className="text-gold font-bold">+5 punti aggiuntivi</span>.
-                Più giochi, più guadagni!
+                Per ogni <strong>serie di tappe consecutive</strong> disputate dalla squadra (senza saltare nessun torneo in mezzo),
+                ricevi <span className="text-gold font-bold">10 punti × numero di tappe di fila</span>.
+                Esempio: 2 tappe consecutive = 10×2 = <strong>20 pt bonus</strong>, 3 consecutive = 10×3 = <strong>30 pt bonus</strong>.
               </p>
             </div>
 

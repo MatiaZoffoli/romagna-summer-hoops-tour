@@ -2,18 +2,14 @@ import Link from "next/link";
 import { Trophy, Flame, MapPin, Music, UtensilsCrossed, Clock } from "lucide-react";
 
 export default function FinalsPage() {
-  // Placeholder 16 teams for the bracket
-  const placeholderTeams = Array.from({ length: 16 }, (_, i) => ({
-    posizione: i + 1,
-    nome: i < 4 ? ["I Predatori", "Rimini Ballers", "Cesena Wolves", "Ravenna Thunder"][i] : `Squadra #${i + 1}`,
-    isPlaceholder: i >= 4,
-  }));
+  // 4 gironi × 4 squadre = 16 posti, tutti "Da qualificare"
+  const slotDaQualificare = (posizione: number) => ({ posizione, nome: "Da qualificare" });
 
   const gironi = [
-    { nome: "GIRONE A", squadre: placeholderTeams.slice(0, 4) },
-    { nome: "GIRONE B", squadre: placeholderTeams.slice(4, 8) },
-    { nome: "GIRONE C", squadre: placeholderTeams.slice(8, 12) },
-    { nome: "GIRONE D", squadre: placeholderTeams.slice(12, 16) },
+    { nome: "GIRONE A", squadre: [1, 2, 3, 4].map((p) => slotDaQualificare(p)) },
+    { nome: "GIRONE B", squadre: [1, 2, 3, 4].map((p) => slotDaQualificare(p)) },
+    { nome: "GIRONE C", squadre: [1, 2, 3, 4].map((p) => slotDaQualificare(p)) },
+    { nome: "GIRONE D", squadre: [1, 2, 3, 4].map((p) => slotDaQualificare(p)) },
   ];
 
   return (
@@ -102,21 +98,14 @@ export default function FinalsPage() {
                 {girone.squadre.map((sq) => (
                   <div
                     key={sq.posizione}
-                    className={`flex items-center justify-between px-6 py-3 border-b border-border/50 ${
-                      sq.isPlaceholder ? "opacity-30" : ""
-                    }`}
+                    className="flex items-center justify-between px-6 py-3 border-b border-border/50 opacity-70"
                   >
                     <div className="flex items-center gap-3">
                       <span className="font-[family-name:var(--font-bebas)] text-lg text-muted w-6">
                         {sq.posizione}
                       </span>
-                      <span className={sq.isPlaceholder ? "text-muted italic" : "font-medium"}>
-                        {sq.isPlaceholder ? "Da qualificare..." : sq.nome}
-                      </span>
+                      <span className="text-muted italic">{sq.nome}</span>
                     </div>
-                    {!sq.isPlaceholder && (
-                      <span className="text-xs text-primary">Qualificata</span>
-                    )}
                   </div>
                 ))}
               </div>

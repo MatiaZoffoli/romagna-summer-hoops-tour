@@ -2,7 +2,7 @@
 
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { sendEmail, notifyOrganizerApproved, notifyOrganizerRejected } from "@/lib/email";
+import { sendEmail, notifyOrganizerApproved, notifyOrganizerRejected, sendWelcomeToTeam, notifyTeamRejected, notifyTeamChangeRequestApproved, notifyTeamChangeRequestRejected } from "@/lib/email";
 import { generateNewsFromEvent } from "@/lib/news-llm";
 
 // Simple password check - uses env var
@@ -191,12 +191,14 @@ export async function getAdminData(password: string) {
 
   const supabase = createServiceRoleClient();
 
-  const [tappeRes, squadreRes, risultatiRes, newsRes, applicationsRes] = await Promise.all([
+  const [tappeRes, squadreRes, risultatiRes, newsRes, applicationsRes, teamApplicationsRes, teamChangeRequestsRes] = await Promise.all([
     supabase.from("tappe").select("*").order("created_at"),
-    supabase.from("squadre").select("*").order("nome"),
+    supabase.from("squadre").select("*, giocatori(*)").order("nome"),
     supabase.from("risultati").select("*, tappe(nome), squadre(nome)").order("created_at", { ascending: false }),
     supabase.from("news").select("*").order("created_at", { ascending: false }),
     supabase.from("tappa_applications").select("*").order("created_at", { ascending: false }),
+    supabase.from("team_applications").select("*").order("created_at", { ascending: false }).then((r) => r).catch(() => ({ data: [] })),
+    supabase.from("team_change_requests").select("*").order("created_at", { ascending: false }).then((r) => r).catch(() => ({ data: [] })),
   ]);
 
   return {
@@ -205,6 +207,8 @@ export async function getAdminData(password: string) {
     risultati: risultatiRes.data || [],
     news: newsRes.data || [],
     applications: applicationsRes.data || [],
+    teamApplications: (teamApplicationsRes as { data?: unknown[] }).data || [],
+    teamChangeRequests: (teamChangeRequestsRes as { data?: unknown[] }).data || [],
   };
 }
 
@@ -377,5 +381,484 @@ export async function rejectTappaApplication(formData: FormData) {
   }
 
   revalidatePath("/admin");
+  return { success: true };
+}
+
+// ============================================
+// TEAM APPLICATIONS (approve / reject)
+// ============================================
+
+export async function approveTeamApplication(formData: FormData) {
+  const password = formData.get("adminPassword") as string;
+  if (!verifyAdmin(password)) {
+    return { error: "Password admin non valida." };
+  }
+
+  const supabase = createServiceRoleClient();
+  const applicationId = formData.get("applicationId") as string;
+
+  const { data: application, error: fetchError } = await supabase
+    .from("team_applications")
+    .select("*")
+    .eq("id", applicationId)
+    .single();
+
+  if (fetchError || !application) {
+    return { error: "Richiesta non trovata." };
+  }
+
+  if (application.stato !== "pending") {
+    return { error: "Questa richiesta è già stata processata." };
+  }
+
+  const pwd = application.password_plain;
+  if (!pwd || pwd.length < 8) {
+    return { error: "Password non disponibile o non valida per questa richiesta." };
+  }
+
+  // Editable fields from form (or keep from application)
+  const nomeSquadra = (formData.get("nome_squadra") as string)?.trim() || application.nome_squadra;
+  const motto = (formData.get("motto") as string)?.trim() || application.motto || null;
+  const instagram = (formData.get("instagram") as string)?.trim() || application.instagram || null;
+  const telefono = (formData.get("telefono") as string)?.trim() || application.telefono || null;
+  const email = (formData.get("email") as string)?.trim() || application.email;
+  const giocatoriRaw = formData.get("giocatori");
+  let giocatori: { nome: string; cognome: string; ruolo?: string; instagram?: string }[];
+  try {
+    giocatori = giocatoriRaw
+      ? (JSON.parse(giocatoriRaw as string) as { nome: string; cognome: string; ruolo?: string; instagram?: string }[])
+      : (application.giocatori as { nome: string; cognome: string; ruolo?: string; instagram?: string }[]) || [];
+  } catch {
+    return { error: "JSON giocatori non valido. Controlla la formattazione." };
+  }
+
+  const validGiocatori = Array.isArray(giocatori)
+    ? giocatori.filter((g) => g.nome?.trim() && g.cognome?.trim())
+    : [];
+
+  const linkToSquadraId = (formData.get("link_to_squadra_id") as string)?.trim() || null;
+
+  // 1. Create auth user (service role has auth.admin)
+  const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    email,
+    password: pwd,
+    email_confirm: true,
+  });
+
+  if (authError) {
+    if (authError.message.includes("already been registered") || authError.message.includes("already exists")) {
+      return { error: "Questa email è già registrata. Usa un'altra email o rifiuta la richiesta." };
+    }
+    return { error: "Errore creazione account: " + authError.message };
+  }
+
+  if (!authData.user) {
+    return { error: "Errore nella creazione dell'account." };
+  }
+
+  let squadra: { id: string };
+
+  if (linkToSquadraId) {
+    // Claim flow: link new user to existing unclaimed squadra
+    const { data: existing, error: fetchSq } = await supabase
+      .from("squadre")
+      .select("id, auth_user_id")
+      .eq("id", linkToSquadraId)
+      .single();
+
+    if (fetchSq || !existing) {
+      return { error: "Squadra da collegare non trovata." };
+    }
+    if (existing.auth_user_id) {
+      return { error: "Questa squadra è già collegata a un account. Scegli 'Crea nuova squadra' o un'altra squadra." };
+    }
+
+    const { error: updateError } = await supabase
+      .from("squadre")
+      .update({
+        auth_user_id: authData.user.id,
+        email: email,
+        nome: nomeSquadra,
+        motto: motto ?? null,
+        instagram: instagram ?? null,
+        telefono: telefono ?? null,
+      })
+      .eq("id", linkToSquadraId);
+
+    if (updateError) {
+      return { error: "Errore nel collegamento alla squadra: " + updateError.message };
+    }
+    squadra = { id: linkToSquadraId };
+
+    // Replace giocatori for claimed squadra with application data
+    await supabase.from("giocatori").delete().eq("squadra_id", linkToSquadraId);
+    if (validGiocatori.length > 0) {
+      const giocatoriData = validGiocatori.map((g) => ({
+        squadra_id: linkToSquadraId,
+        nome: String(g.nome).trim(),
+        cognome: String(g.cognome).trim(),
+        ruolo: g.ruolo?.trim() || null,
+        instagram: g.instagram?.trim() || null,
+      }));
+      await supabase.from("giocatori").insert(giocatoriData);
+    }
+  } else {
+    // 2. Create new squadra
+    const { data: newSquadra, error: squadraError } = await supabase
+      .from("squadre")
+      .insert({
+        auth_user_id: authData.user.id,
+        nome: nomeSquadra,
+        motto,
+        instagram,
+        email,
+        telefono,
+      })
+      .select()
+      .single();
+
+    if (squadraError) {
+      return { error: "Errore nella creazione della squadra: " + squadraError.message };
+    }
+    squadra = newSquadra;
+
+    // 3. Create giocatori
+    if (validGiocatori.length > 0) {
+      const giocatoriData = validGiocatori.map((g) => ({
+        squadra_id: squadra.id,
+        nome: String(g.nome).trim(),
+        cognome: String(g.cognome).trim(),
+        ruolo: g.ruolo?.trim() || null,
+        instagram: g.instagram?.trim() || null,
+      }));
+      const { error: giocError } = await supabase.from("giocatori").insert(giocatoriData);
+      if (giocError) {
+        return { error: "Errore nell'inserimento dei giocatori: " + giocError.message };
+      }
+    }
+  }
+
+  // 4. Update application (clear password, set approved)
+  await supabase
+    .from("team_applications")
+    .update({
+      stato: "approved",
+      reviewed_at: new Date().toISOString(),
+      password_plain: null,
+    })
+    .eq("id", applicationId);
+
+  try {
+    await sendWelcomeToTeam({ nome: nomeSquadra, email });
+  } catch (e) {
+    console.error("Welcome email error:", e);
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/");
+  return { success: true };
+}
+
+export async function rejectTeamApplication(formData: FormData) {
+  const password = formData.get("adminPassword") as string;
+  if (!verifyAdmin(password)) {
+    return { error: "Password admin non valida." };
+  }
+
+  const supabase = createServiceRoleClient();
+  const applicationId = formData.get("applicationId") as string;
+  const reason = (formData.get("reason") as string)?.trim() || null;
+
+  const { data: application } = await supabase
+    .from("team_applications")
+    .select("*")
+    .eq("id", applicationId)
+    .single();
+
+  const { error } = await supabase
+    .from("team_applications")
+    .update({
+      stato: "rejected",
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: reason,
+      password_plain: null,
+    })
+    .eq("id", applicationId);
+
+  if (error) {
+    return { error: "Errore: " + error.message };
+  }
+
+  if (application) {
+    try {
+      await notifyTeamRejected({
+        email: application.email,
+        nome_squadra: application.nome_squadra,
+        reason,
+      });
+    } catch (e) {
+      console.error("Rejection email error:", e);
+    }
+  }
+
+  revalidatePath("/admin");
+  return { success: true };
+}
+
+// ============================================
+// GESTIONE SQUADRE (admin create / update)
+// ============================================
+
+export async function createSquadraAdmin(formData: FormData) {
+  const password = formData.get("adminPassword") as string;
+  if (!verifyAdmin(password)) {
+    return { error: "Password admin non valida." };
+  }
+
+  const supabase = createServiceRoleClient();
+  const nome = (formData.get("nome") as string)?.trim();
+  if (!nome) return { error: "Nome squadra obbligatorio." };
+
+  const email = (formData.get("email") as string)?.trim() || null;
+  const telefono = (formData.get("telefono") as string)?.trim() || null;
+  const instagram = (formData.get("instagram") as string)?.trim() || null;
+  const motto = (formData.get("motto") as string)?.trim() || null;
+  const adminNotes = (formData.get("admin_notes") as string)?.trim() || null;
+  const giocatoriJson = formData.get("giocatori") as string;
+
+  const { data: squadra, error: squadraError } = await supabase
+    .from("squadre")
+    .insert({
+      auth_user_id: null,
+      nome,
+      email,
+      telefono,
+      instagram,
+      motto,
+      admin_notes: adminNotes,
+    })
+    .select()
+    .single();
+
+  if (squadraError) {
+    return { error: "Errore creazione squadra: " + squadraError.message };
+  }
+
+  if (giocatoriJson) {
+    let giocatori: { nome: string; cognome: string; ruolo?: string; instagram?: string }[] = [];
+    try {
+      giocatori = JSON.parse(giocatoriJson);
+    } catch {
+      // optional
+    }
+    const valid = giocatori.filter((g) => g.nome?.trim() && g.cognome?.trim());
+    if (valid.length > 0) {
+      const rows = valid.map((g) => ({
+        squadra_id: squadra.id,
+        nome: String(g.nome).trim(),
+        cognome: String(g.cognome).trim(),
+        ruolo: g.ruolo?.trim() || null,
+        instagram: g.instagram?.trim() || null,
+      }));
+      await supabase.from("giocatori").insert(rows);
+    }
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/classifica");
+  revalidatePath("/squadre");
+  revalidatePath("/");
+  return { success: true };
+}
+
+export async function updateSquadraAdmin(formData: FormData) {
+  const password = formData.get("adminPassword") as string;
+  if (!verifyAdmin(password)) {
+    return { error: "Password admin non valida." };
+  }
+
+  const supabase = createServiceRoleClient();
+  const squadraId = formData.get("squadraId") as string;
+  if (!squadraId) return { error: "Squadra non specificata." };
+
+  const nome = (formData.get("nome") as string)?.trim();
+  if (!nome) return { error: "Nome squadra obbligatorio." };
+
+  const email = (formData.get("email") as string)?.trim() || null;
+  const telefono = (formData.get("telefono") as string)?.trim() || null;
+  const instagram = (formData.get("instagram") as string)?.trim() || null;
+  const motto = (formData.get("motto") as string)?.trim() || null;
+  const adminNotes = (formData.get("admin_notes") as string)?.trim() || null;
+  const giocatoriJson = formData.get("giocatori") as string;
+
+  const { error: updateError } = await supabase
+    .from("squadre")
+    .update({
+      nome,
+      email,
+      telefono,
+      instagram,
+      motto,
+      admin_notes: adminNotes,
+    })
+    .eq("id", squadraId);
+
+  if (updateError) {
+    return { error: "Errore aggiornamento: " + updateError.message };
+  }
+
+  if (giocatoriJson !== undefined && giocatoriJson !== null) {
+    let giocatori: { nome: string; cognome: string; ruolo?: string; instagram?: string }[] = [];
+    try {
+      giocatori = JSON.parse(giocatoriJson);
+    } catch {
+      return { error: "JSON giocatori non valido." };
+    }
+    await supabase.from("giocatori").delete().eq("squadra_id", squadraId);
+    const valid = giocatori.filter((g) => g.nome?.trim() && g.cognome?.trim());
+    if (valid.length > 0) {
+      const rows = valid.map((g) => ({
+        squadra_id: squadraId,
+        nome: String(g.nome).trim(),
+        cognome: String(g.cognome).trim(),
+        ruolo: g.ruolo?.trim() || null,
+        instagram: g.instagram?.trim() || null,
+      }));
+      const { error: giocError } = await supabase.from("giocatori").insert(rows);
+      if (giocError) return { error: "Errore giocatori: " + giocError.message };
+    }
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/classifica");
+  revalidatePath("/squadre");
+  revalidatePath("/");
+  return { success: true };
+}
+
+export async function deleteRisultatoAdmin(formData: FormData) {
+  const password = formData.get("adminPassword") as string;
+  if (!verifyAdmin(password)) {
+    return { error: "Password admin non valida." };
+  }
+  const supabase = createServiceRoleClient();
+  const risultatoId = formData.get("risultatoId") as string;
+  if (!risultatoId) return { error: "Risultato non specificato." };
+  const { error } = await supabase.from("risultati").delete().eq("id", risultatoId);
+  if (error) return { error: "Errore: " + error.message };
+  revalidatePath("/admin");
+  revalidatePath("/classifica");
+  revalidatePath("/");
+  return { success: true };
+}
+
+// ============================================
+// TEAM CHANGE REQUESTS (approve / reject)
+// ============================================
+
+export async function approveTeamChangeRequest(formData: FormData) {
+  const password = formData.get("adminPassword") as string;
+  if (!verifyAdmin(password)) {
+    return { error: "Password admin non valida." };
+  }
+
+  const supabase = createServiceRoleClient();
+  const requestId = formData.get("requestId") as string;
+  if (!requestId) return { error: "Richiesta non specificata." };
+
+  const { data: req, error: fetchErr } = await supabase
+    .from("team_change_requests")
+    .select("*")
+    .eq("id", requestId)
+    .single();
+
+  if (fetchErr || !req || req.stato !== "pending") {
+    return { error: "Richiesta non trovata o già processata." };
+  }
+
+  const payload = (formData.get("payload") as string)
+    ? JSON.parse(formData.get("payload") as string)
+    : (req.payload as { nome?: string; motto?: string; instagram?: string; telefono?: string; giocatori?: { nome: string; cognome: string; ruolo?: string; instagram?: string }[] });
+
+  const nome = payload.nome ?? req.payload?.nome;
+  if (!nome) return { error: "Nome squadra obbligatorio." };
+
+  const { error: updateErr } = await supabase
+    .from("squadre")
+    .update({
+      nome,
+      motto: payload.motto ?? null,
+      instagram: payload.instagram ?? null,
+      telefono: payload.telefono ?? null,
+    })
+    .eq("id", req.squadra_id);
+
+  if (updateErr) return { error: "Errore aggiornamento squadra: " + updateErr.message };
+
+  const giocatori = Array.isArray(payload.giocatori) ? payload.giocatori : [];
+  const valid = giocatori.filter((g: { nome?: string; cognome?: string }) => g.nome?.trim() && g.cognome?.trim());
+  await supabase.from("giocatori").delete().eq("squadra_id", req.squadra_id);
+  if (valid.length > 0) {
+    const rows = valid.map((g: { nome: string; cognome: string; ruolo?: string; instagram?: string }) => ({
+      squadra_id: req.squadra_id,
+      nome: String(g.nome).trim(),
+      cognome: String(g.cognome).trim(),
+      ruolo: g.ruolo?.trim() || null,
+      instagram: g.instagram?.trim() || null,
+    }));
+    await supabase.from("giocatori").insert(rows);
+  }
+
+  await supabase
+    .from("team_change_requests")
+    .update({ stato: "approved", reviewed_at: new Date().toISOString() })
+    .eq("id", requestId);
+
+  const { data: squadraRow } = await supabase.from("squadre").select("nome, email").eq("id", req.squadra_id).single();
+  if (squadraRow?.email) {
+    try {
+      await notifyTeamChangeRequestApproved({ squadra_nome: squadraRow.nome ?? nome, email: squadraRow.email });
+    } catch (e) {
+      console.error("Change request approved email error:", e);
+    }
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/dashboard");
+  revalidatePath("/squadre");
+  revalidatePath("/");
+  return { success: true };
+}
+
+export async function rejectTeamChangeRequest(formData: FormData) {
+  const password = formData.get("adminPassword") as string;
+  if (!verifyAdmin(password)) {
+    return { error: "Password admin non valida." };
+  }
+
+  const supabase = createServiceRoleClient();
+  const requestId = formData.get("requestId") as string;
+  const adminNotes = (formData.get("admin_notes") as string)?.trim() || null;
+
+  const { data: req } = await supabase.from("team_change_requests").select("squadra_id").eq("id", requestId).single();
+  const { data: squadraRow } = req ? await supabase.from("squadre").select("nome, email").eq("id", req.squadra_id).single() : { data: null };
+
+  const { error } = await supabase
+    .from("team_change_requests")
+    .update({ stato: "rejected", reviewed_at: new Date().toISOString(), admin_notes: adminNotes })
+    .eq("id", requestId);
+
+  if (error) return { error: "Errore: " + error.message };
+
+  if (squadraRow?.email) {
+    try {
+      await notifyTeamChangeRequestRejected({ squadra_nome: squadraRow.nome ?? "Squadra", email: squadraRow.email, admin_notes: adminNotes });
+    } catch (e) {
+      console.error("Change request rejected email error:", e);
+    }
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/dashboard");
   return { success: true };
 }

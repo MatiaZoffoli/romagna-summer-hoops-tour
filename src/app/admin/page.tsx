@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Shield, Trophy, Plus, Newspaper, MapPin, Loader2, CheckCircle, Lock, FileText, X, Eye, Edit2, Copy, ImageIcon } from "lucide-react";
-import { addTappaResult, updateTappaStatus, addNews, addTappa, getAdminData, approveTappaApplication, rejectTappaApplication, sendTestEmail } from "@/app/actions/admin";
+import { addTappaResult, updateTappaStatus, addNews, addTappa, getAdminData, approveTappaApplication, rejectTappaApplication, approveTeamApplication, rejectTeamApplication, createSquadraAdmin, updateSquadraAdmin, deleteRisultatoAdmin, approveTeamChangeRequest, rejectTeamChangeRequest, sendTestEmail } from "@/app/actions/admin";
 import { sistemaPunteggio } from "@/data/placeholder";
 import AckModal from "@/components/AckModal";
 
@@ -39,9 +39,20 @@ function NewsCaptionRow({ id, titolo, instagramCaption }: { id: string; titolo: 
 
 interface AdminData {
   tappe: { id: string; slug: string; nome: string; stato: string }[];
-  squadre: { id: string; nome: string }[];
-  risultati: { id: string; posizione: number; punti: number; tappe: { nome: string }; squadre: { nome: string } }[];
+  squadre: {
+    id: string;
+    nome: string;
+    email: string | null;
+    telefono: string | null;
+    instagram: string | null;
+    motto: string | null;
+    auth_user_id: string | null;
+    admin_notes: string | null;
+    giocatori?: { id: string; nome: string; cognome: string; ruolo: string | null; instagram: string | null }[];
+  }[];
+  risultati: { id: string; posizione: number; punti: number; tappa_id: string; squadra_id: string; tappe: { nome: string }; squadre: { nome: string } }[];
   news: { id: string; titolo: string; data: string; instagram_caption: string | null }[];
+  teamChangeRequests: { id: string; squadra_id: string; stato: string; payload: Record<string, unknown>; created_at: string }[];
   applications: {
     id: string;
     nome_organizzatore: string;
@@ -61,6 +72,17 @@ interface AdminData {
     stato: string;
     created_at: string;
   }[];
+  teamApplications: {
+    id: string;
+    email: string;
+    nome_squadra: string;
+    motto: string | null;
+    instagram: string | null;
+    telefono: string | null;
+    giocatori: { nome: string; cognome: string; ruolo?: string; instagram?: string }[];
+    stato: string;
+    created_at: string;
+  }[];
 }
 
 export default function AdminPage() {
@@ -70,11 +92,20 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<"risultati" | "tappe" | "news" | "stato" | "applicazioni">("risultati");
+  const [activeTab, setActiveTab] = useState<"risultati" | "tappe" | "news" | "stato" | "applicazioni" | "squadre" | "gestione-squadre">("risultati");
   const [previewApp, setPreviewApp] = useState<AdminData["applications"][0] | null>(null);
   const [editingApp, setEditingApp] = useState<AdminData["applications"][0] | null>(null);
+  const [previewTeamApp, setPreviewTeamApp] = useState<AdminData["teamApplications"][0] | null>(null);
+  const [editingTeamApp, setEditingTeamApp] = useState<AdminData["teamApplications"][0] | null>(null);
+  const [editingSquadra, setEditingSquadra] = useState<AdminData["squadre"][0] | null>(null);
+  const [showCreateSquadra, setShowCreateSquadra] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectDialog, setShowRejectDialog] = useState<string | null>(null);
+  const [showRejectTeamDialog, setShowRejectTeamDialog] = useState<string | null>(null);
+  const [rejectTeamReason, setRejectTeamReason] = useState("");
+  const [editingChangeRequest, setEditingChangeRequest] = useState<AdminData["teamChangeRequests"][0] | null>(null);
+  const [showRejectChangeRequest, setShowRejectChangeRequest] = useState<string | null>(null);
+  const [rejectChangeRequestNote, setRejectChangeRequestNote] = useState("");
   const [testingEmail, setTestingEmail] = useState(false);
 
   async function handleLogin() {
@@ -227,6 +258,195 @@ export default function AdminPage() {
     setLoading(false);
   }
 
+  async function handleApproveTeamApplication(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    formData.set("adminPassword", password);
+    formData.set("applicationId", editingTeamApp?.id || "");
+    formData.set("email", (form.querySelector('[name="email"]') as HTMLInputElement)?.value ?? editingTeamApp?.email ?? "");
+    formData.set("nome_squadra", (form.querySelector('[name="nome_squadra"]') as HTMLInputElement)?.value ?? editingTeamApp?.nome_squadra ?? "");
+    formData.set("motto", (form.querySelector('[name="motto"]') as HTMLInputElement)?.value ?? "");
+    formData.set("instagram", (form.querySelector('[name="instagram"]') as HTMLInputElement)?.value ?? "");
+    formData.set("telefono", (form.querySelector('[name="telefono"]') as HTMLInputElement)?.value ?? "");
+    const giocatoriEl = form.querySelector('[name="giocatori"]') as HTMLTextAreaElement;
+    formData.set("giocatori", giocatoriEl?.value ? giocatoriEl.value : JSON.stringify(editingTeamApp?.giocatori ?? []));
+    const result = await approveTeamApplication(formData);
+    if (result.error) setError(result.error);
+    else {
+      showMessage("Squadra approvata!");
+      setEditingTeamApp(null);
+      await refreshData();
+    }
+    setLoading(false);
+  }
+
+  async function handleRejectTeamApplication(applicationId: string, reason?: string) {
+    setError("");
+    setLoading(true);
+    const formData = new FormData();
+    formData.set("adminPassword", password);
+    formData.set("applicationId", applicationId);
+    if (reason) formData.set("reason", reason);
+    const result = await rejectTeamApplication(formData);
+    if (result.error) setError(result.error);
+    else {
+      showMessage("Richiesta squadra rifiutata.");
+      setShowRejectTeamDialog(null);
+      setRejectTeamReason("");
+      await refreshData();
+    }
+    setLoading(false);
+  }
+
+  function getSquadraStats(squadraId: string) {
+    if (!data?.risultati) return { tappe_giocate: 0, punti_totali: 0 };
+    const ris = data.risultati.filter((r: { squadra_id: string }) => r.squadra_id === squadraId);
+    const punti_totali = ris.reduce((s: number, r: { punti: number }) => s + r.punti, 0);
+    return { tappe_giocate: ris.length, punti_totali };
+  }
+
+  function hasPendingChangeRequest(squadraId: string) {
+    return data?.teamChangeRequests?.some((r) => r.squadra_id === squadraId && r.stato === "pending") ?? false;
+  }
+
+  function normalizeSquadraName(name: string): string {
+    return String(name ?? "")
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, " ");
+  }
+
+  function findDuplicateSquadraName(name: string, excludeId?: string): { nome: string } | null {
+    const norm = normalizeSquadraName(name);
+    if (!norm) return null;
+    const other = data?.squadre?.find(
+      (s) => s.id !== excludeId && normalizeSquadraName(s.nome) === norm
+    );
+    return other ? { nome: other.nome } : null;
+  }
+
+  const [duplicateWarning, setDuplicateWarning] = useState<{ otherName: string } | null>(null);
+  const [forceDuplicateOk, setForceDuplicateOk] = useState(false);
+  const createSquadraFormRef = useRef<HTMLFormElement>(null);
+  const editSquadraFormRef = useRef<HTMLFormElement>(null);
+
+  async function handleCreateSquadra(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const force = formData.get("force_duplicate") === "1";
+    const nome = (form.querySelector('[name="nome"]') as HTMLInputElement)?.value?.trim() ?? "";
+    const duplicate = findDuplicateSquadraName(nome);
+    if (duplicate && !force) {
+      setDuplicateWarning({ otherName: duplicate.nome });
+      return;
+    }
+    setDuplicateWarning(null);
+    setForceDuplicateOk(false);
+    setError("");
+    setLoading(true);
+    formData.set("adminPassword", password);
+    const result = await createSquadraAdmin(formData);
+    if (result.error) setError(result.error);
+    else {
+      showMessage("Squadra creata!");
+      setShowCreateSquadra(false);
+      form.reset();
+      await refreshData();
+    }
+    setLoading(false);
+  }
+
+  async function handleUpdateSquadra(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!editingSquadra) return;
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const force = formData.get("force_duplicate") === "1";
+    const nome = (form.querySelector('[name="nome"]') as HTMLInputElement)?.value?.trim() ?? "";
+    const duplicate = findDuplicateSquadraName(nome, editingSquadra.id);
+    if (duplicate && !force) {
+      setDuplicateWarning({ otherName: duplicate.nome });
+      return;
+    }
+    setDuplicateWarning(null);
+    setForceDuplicateOk(false);
+    setError("");
+    setLoading(true);
+    formData.set("adminPassword", password);
+    formData.set("squadraId", editingSquadra.id);
+    formData.set("nome", nome || editingSquadra.nome);
+    formData.set("email", (form.querySelector('[name="email"]') as HTMLInputElement)?.value ?? "");
+    formData.set("telefono", (form.querySelector('[name="telefono"]') as HTMLInputElement)?.value ?? "");
+    formData.set("instagram", (form.querySelector('[name="instagram"]') as HTMLInputElement)?.value ?? "");
+    formData.set("motto", (form.querySelector('[name="motto"]') as HTMLInputElement)?.value ?? "");
+    formData.set("admin_notes", (form.querySelector('[name="admin_notes"]') as HTMLInputElement)?.value ?? "");
+    const giocatoriEl = form.querySelector('[name="giocatori"]') as HTMLTextAreaElement;
+    formData.set("giocatori", giocatoriEl?.value ?? JSON.stringify(editingSquadra.giocatori ?? [], null, 2));
+    const result = await updateSquadraAdmin(formData);
+    if (result.error) setError(result.error);
+    else {
+      showMessage("Squadra aggiornata!");
+      setEditingSquadra(null);
+      await refreshData();
+    }
+    setLoading(false);
+  }
+
+  async function handleDeleteRisultato(risultatoId: string) {
+    setError("");
+    setLoading(true);
+    const formData = new FormData();
+    formData.set("adminPassword", password);
+    formData.set("risultatoId", risultatoId);
+    const result = await deleteRisultatoAdmin(formData);
+    if (result.error) setError(result.error);
+    else {
+      showMessage("Risultato eliminato.");
+      await refreshData();
+    }
+    setLoading(false);
+  }
+
+  async function handleApproveTeamChangeRequest(e: React.FormEvent<HTMLFormElement> | null, requestId: string, payloadJson?: string) {
+    e?.preventDefault();
+    setError("");
+    setLoading(true);
+    const formData = new FormData();
+    formData.set("adminPassword", password);
+    formData.set("requestId", requestId);
+    if (payloadJson) formData.set("payload", payloadJson);
+    const result = await approveTeamChangeRequest(formData);
+    if (result.error) setError(result.error);
+    else {
+      showMessage("Richiesta di modifica approvata.");
+      setEditingChangeRequest(null);
+      await refreshData();
+    }
+    setLoading(false);
+  }
+
+  async function handleRejectTeamChangeRequest(requestId: string, note?: string) {
+    setError("");
+    setLoading(true);
+    const formData = new FormData();
+    formData.set("adminPassword", password);
+    formData.set("requestId", requestId);
+    if (note) formData.set("admin_notes", note);
+    const result = await rejectTeamChangeRequest(formData);
+    if (result.error) setError(result.error);
+    else {
+      showMessage("Richiesta di modifica rifiutata.");
+      setShowRejectChangeRequest(null);
+      setRejectChangeRequestNote("");
+      await refreshData();
+    }
+    setLoading(false);
+  }
+
   // Login screen
   if (!authenticated) {
     return (
@@ -287,7 +507,7 @@ export default function AdminPage() {
               ADMIN PANEL
             </h1>
             <p className="text-sm text-muted mt-1">
-              {data?.squadre.length} squadre · {data?.tappe.length} tappe · {data?.risultati.length} risultati · {data?.applications.filter(a => a.stato === 'pending').length || 0} applicazioni in attesa
+              {data?.squadre.length} squadre · {data?.tappe.length} tappe · {data?.risultati.length} risultati · {data?.applications.filter(a => a.stato === 'pending').length || 0} tappe in attesa · {data?.teamApplications.filter(t => t.stato === 'pending').length || 0} squadre in attesa
             </p>
           </div>
         </div>
@@ -334,7 +554,9 @@ export default function AdminPage() {
             { id: "stato" as const, label: "Stato Tappe", icon: MapPin },
             { id: "tappe" as const, label: "Nuova Tappa", icon: Plus },
             { id: "news" as const, label: "Nuova News", icon: Newspaper },
-            { id: "applicazioni" as const, label: `Applicazioni${data?.applications.filter(a => a.stato === 'pending').length ? ` (${data.applications.filter(a => a.stato === 'pending').length})` : ''}`, icon: FileText },
+            { id: "applicazioni" as const, label: `Tappe${data?.applications.filter(a => a.stato === 'pending').length ? ` (${data.applications.filter(a => a.stato === 'pending').length})` : ''}`, icon: FileText },
+            { id: "squadre" as const, label: `Richieste squadre${data?.teamApplications.filter(t => t.stato === 'pending').length ? ` (${data.teamApplications.filter(t => t.stato === 'pending').length})` : ''}`, icon: Users },
+            { id: "gestione-squadre" as const, label: "Gestione squadre", icon: Users },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -973,6 +1195,364 @@ export default function AdminPage() {
               <div className="p-12 bg-surface rounded-2xl border border-dashed border-border text-center">
                 <FileText size={48} className="mx-auto mb-4 text-primary/30" />
                 <p className="text-muted">Nessuna applicazione ancora.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== RICHIESTE SQUADRE ===== */}
+        {activeTab === "squadre" && (
+          <div className="space-y-6">
+            {/* Preview modal */}
+            {previewTeamApp && (
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-surface rounded-2xl border border-border max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                  <div className="p-6 border-b border-border flex items-center justify-between">
+                    <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider">ANTEPRIMA RICHIESTA SQUADRA</h2>
+                    <button onClick={() => setPreviewTeamApp(null)} className="p-2 hover:bg-background rounded-lg transition-colors"><X size={20} /></button>
+                  </div>
+                  <div className="p-6 space-y-4">
+                    <h3 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider">{previewTeamApp.nome_squadra}</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                      <div><span className="text-muted">Email:</span> <a href={`mailto:${previewTeamApp.email}`} className="text-primary hover:text-gold">{previewTeamApp.email}</a></div>
+                      {previewTeamApp.telefono && <div><span className="text-muted">Telefono:</span> <span className="text-foreground">{previewTeamApp.telefono}</span></div>}
+                      {previewTeamApp.instagram && <div><span className="text-muted">Instagram:</span> <span className="text-foreground">{previewTeamApp.instagram}</span></div>}
+                      {previewTeamApp.motto && <div className="sm:col-span-2"><span className="text-muted">Motto:</span> <span className="text-foreground italic">&quot;{previewTeamApp.motto}&quot;</span></div>}
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted mb-2">Giocatori ({previewTeamApp.giocatori?.length ?? 0})</p>
+                      <ul className="space-y-1 text-sm">
+                        {(previewTeamApp.giocatori || []).map((g: { nome: string; cognome: string; ruolo?: string }, i: number) => (
+                          <li key={i}>{g.nome} {g.cognome}{g.ruolo ? ` · ${g.ruolo}` : ""}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="pt-4 border-t border-border flex gap-3">
+                      <button onClick={() => { setPreviewTeamApp(null); setEditingTeamApp(previewTeamApp); }} className="px-4 py-2 bg-primary text-white text-sm rounded-full hover:bg-primary-dark transition-colors flex items-center gap-2">
+                        <Edit2 size={14} /> Modifica e Approva
+                      </button>
+                      <button onClick={() => setPreviewTeamApp(null)} className="px-4 py-2 bg-surface border border-border text-foreground text-sm rounded-full hover:bg-background transition-colors">Chiudi</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Edit & Approve modal */}
+            {editingTeamApp && (
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-surface rounded-2xl border border-border max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                  <div className="p-6 border-b border-border flex items-center justify-between">
+                    <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider">MODIFICA E APPROVA SQUADRA</h2>
+                    <button onClick={() => setEditingTeamApp(null)} className="p-2 hover:bg-background rounded-lg transition-colors"><X size={20} /></button>
+                  </div>
+                  <form onSubmit={handleApproveTeamApplication} className="p-6 space-y-4">
+                    <div>
+                      <label className="block text-sm text-muted mb-2">Collega a squadra esistente (senza account)</label>
+                      <select name="link_to_squadra_id" className={inputClass}>
+                        <option value="">Crea nuova squadra</option>
+                        {data?.squadre?.filter((s) => !s.auth_user_id).map((s) => (
+                          <option key={s.id} value={s.id}>{s.nome}</option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-muted mt-1">Se scegli una squadra, l&apos;account verrà collegato a quella squadra invece di crearne una nuova.</p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div><label className="block text-sm text-muted mb-2">Email *</label><input name="email" type="email" defaultValue={editingTeamApp.email} required className={inputClass} /></div>
+                      <div><label className="block text-sm text-muted mb-2">Nome squadra *</label><input name="nome_squadra" defaultValue={editingTeamApp.nome_squadra} required className={inputClass} /></div>
+                      <div><label className="block text-sm text-muted mb-2">Telefono</label><input name="telefono" defaultValue={editingTeamApp.telefono || ""} className={inputClass} /></div>
+                      <div><label className="block text-sm text-muted mb-2">Instagram</label><input name="instagram" defaultValue={editingTeamApp.instagram || ""} className={inputClass} /></div>
+                      <div className="sm:col-span-2"><label className="block text-sm text-muted mb-2">Motto</label><input name="motto" defaultValue={editingTeamApp.motto || ""} className={inputClass} /></div>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-muted mb-2">Giocatori (JSON)</label>
+                      <textarea name="giocatori" rows={8} defaultValue={JSON.stringify(editingTeamApp.giocatori || [], null, 2)} className={inputClass} />
+                    </div>
+                    <div className="pt-4 border-t border-border flex gap-3">
+                      <button type="submit" disabled={loading} className="px-4 py-2 bg-green-500 text-white text-sm rounded-full hover:bg-green-600 transition-colors flex items-center gap-2 disabled:opacity-50">
+                        {loading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />} Approva Squadra
+                      </button>
+                      <button type="button" onClick={() => setEditingTeamApp(null)} className="px-4 py-2 bg-surface border border-border text-foreground text-sm rounded-full hover:bg-background transition-colors">Annulla</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* Reject team dialog */}
+            {showRejectTeamDialog && (
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-surface rounded-2xl border border-border max-w-md w-full">
+                  <div className="p-6 border-b border-border"><h2 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider">RIFIUTA RICHIESTA SQUADRA</h2></div>
+                  <div className="p-6 space-y-4">
+                    <div>
+                      <label className="block text-sm text-muted mb-2">Motivo del rifiuto (opzionale)</label>
+                      <textarea value={rejectTeamReason} onChange={(e) => setRejectTeamReason(e.target.value)} rows={4} placeholder="Inserisci un motivo..." className={inputClass} />
+                    </div>
+                    <div className="flex gap-3">
+                      <button onClick={() => handleRejectTeamApplication(showRejectTeamDialog, rejectTeamReason)} disabled={loading} className="px-4 py-2 bg-red-500 text-white text-sm rounded-full hover:bg-red-600 transition-colors flex items-center gap-2 disabled:opacity-50">
+                        {loading ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />} Conferma Rifiuto
+                      </button>
+                      <button onClick={() => { setShowRejectTeamDialog(null); setRejectTeamReason(""); }} className="px-4 py-2 bg-surface border border-border text-foreground text-sm rounded-full hover:bg-background transition-colors">Annulla</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Pending team applications */}
+            {data && data.teamApplications.filter(t => t.stato === "pending").length > 0 && (
+              <div>
+                <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider mb-4">IN ATTESA DI APPROVAZIONE</h2>
+                <div className="space-y-4">
+                  {data.teamApplications.filter(t => t.stato === "pending").map((app) => (
+                    <div key={app.id} className="p-6 bg-surface rounded-2xl border border-border">
+                      <div className="flex items-start justify-between gap-4 mb-4">
+                        <div className="flex-1">
+                          <h3 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider mb-2">{app.nome_squadra}</h3>
+                          <a href={`mailto:${app.email}`} className="text-sm text-primary hover:text-gold">{app.email}</a>
+                        </div>
+                        <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 text-xs font-semibold rounded-full border border-yellow-500/30">IN ATTESA</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mb-4">
+                        {app.telefono && <div><span className="text-muted">Telefono:</span> <span className="text-foreground">{app.telefono}</span></div>}
+                        {app.instagram && <div><span className="text-muted">Instagram:</span> <span className="text-foreground">{app.instagram}</span></div>}
+                        <div><span className="text-muted">Giocatori:</span> <span className="text-foreground">{app.giocatori?.length ?? 0}</span></div>
+                      </div>
+                      <div className="flex gap-3">
+                        <button onClick={() => setPreviewTeamApp(app)} className="px-4 py-2 bg-surface border border-border text-foreground text-sm rounded-full hover:bg-background transition-colors flex items-center gap-2"><Eye size={14} /> Anteprima</button>
+                        <button onClick={() => setEditingTeamApp(app)} className="px-4 py-2 bg-primary text-white text-sm rounded-full hover:bg-primary-dark transition-colors flex items-center gap-2"><Edit2 size={14} /> Modifica e Approva</button>
+                        <button onClick={() => setShowRejectTeamDialog(app.id)} className="px-4 py-2 bg-red-500 text-white text-sm rounded-full hover:bg-red-600 transition-colors flex items-center gap-2"><X size={14} /> Rifiuta</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Approved / Rejected team applications */}
+            {data && data.teamApplications.filter(t => t.stato === "approved").length > 0 && (
+              <div>
+                <h2 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider mb-4 text-green-400">APPROVATE</h2>
+                <div className="space-y-2">
+                  {data.teamApplications.filter(t => t.stato === "approved").map((app) => (
+                    <div key={app.id} className="p-4 bg-surface rounded-xl border border-green-500/20 flex items-center justify-between">
+                      <div><span className="font-medium">{app.nome_squadra}</span><span className="text-xs text-muted ml-2">{app.email}</span></div>
+                      <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full">Approvata</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {data && data.teamApplications.filter(t => t.stato === "rejected").length > 0 && (
+              <div>
+                <h2 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider mb-4 text-red-400">RIFIUTATE</h2>
+                <div className="space-y-2">
+                  {data.teamApplications.filter(t => t.stato === "rejected").map((app) => (
+                    <div key={app.id} className="p-4 bg-surface rounded-xl border border-red-500/20 flex items-center justify-between">
+                      <div><span className="font-medium">{app.nome_squadra}</span><span className="text-xs text-muted ml-2">{app.email}</span></div>
+                      <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full">Rifiutata</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {data && data.teamApplications.length === 0 && (
+              <div className="p-12 bg-surface rounded-2xl border border-dashed border-border text-center">
+                <Users size={48} className="mx-auto mb-4 text-primary/30" />
+                <p className="text-muted">Nessuna richiesta squadra ancora.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== GESTIONE SQUADRE ===== */}
+        {activeTab === "gestione-squadre" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider">Tutte le squadre</h2>
+              <button
+                type="button"
+                onClick={() => setShowCreateSquadra(true)}
+                className="px-4 py-2 bg-primary text-white text-sm rounded-full hover:bg-primary-dark transition-colors flex items-center gap-2"
+              >
+                <Plus size={14} /> Aggiungi squadra
+              </button>
+            </div>
+
+            {/* Pending change requests */}
+            {data?.teamChangeRequests?.filter((r) => r.stato === "pending").length ? (
+              <div className="p-6 bg-surface rounded-2xl border border-yellow-500/30">
+                <h3 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider mb-4 text-yellow-400">Richieste di modifica in attesa</h3>
+                <div className="space-y-3">
+                  {data.teamChangeRequests.filter((r) => r.stato === "pending").map((req) => {
+                    const sq = data.squadre.find((s) => s.id === req.squadra_id);
+                    const payload = (req.payload || {}) as { nome?: string; motto?: string; instagram?: string; telefono?: string; giocatori?: unknown[] };
+                    return (
+                      <div key={req.id} className="p-4 bg-background rounded-xl border border-border flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                          <span className="font-medium">{sq?.nome ?? req.squadra_id}</span>
+                          <p className="text-sm text-muted mt-1">Richiesto: {payload.nome ?? "—"} · {Array.isArray(payload.giocatori) ? payload.giocatori.length : 0} giocatori</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => setEditingChangeRequest(req)} className="px-3 py-1.5 bg-primary text-white text-sm rounded-full hover:bg-primary-dark flex items-center gap-1"><Edit2 size={12} /> Modifica e approva</button>
+                          <button onClick={() => handleApproveTeamChangeRequest(null, req.id)} disabled={loading} className="px-3 py-1.5 bg-green-500 text-white text-sm rounded-full hover:bg-green-600 disabled:opacity-50">Approva</button>
+                          <button onClick={() => setShowRejectChangeRequest(req.id)} className="px-3 py-1.5 bg-red-500 text-white text-sm rounded-full hover:bg-red-600">Rifiuta</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Edit change request (modify and approve) modal */}
+            {editingChangeRequest && (
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-surface rounded-2xl border border-border max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                  <div className="p-6 border-b border-border flex items-center justify-between">
+                    <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider">Modifica e approva richiesta</h2>
+                    <button onClick={() => setEditingChangeRequest(null)} className="p-2 hover:bg-background rounded-lg"><X size={20} /></button>
+                  </div>
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    const form = e.currentTarget;
+                    const payloadEl = form.querySelector('[name="payload"]') as HTMLTextAreaElement;
+                    handleApproveTeamChangeRequest(e, editingChangeRequest.id, payloadEl?.value);
+                  }} className="p-6 space-y-4">
+                    <div><label className="block text-sm text-muted mb-2">Payload (nome, motto, instagram, telefono, giocatori)</label><textarea name="payload" rows={12} defaultValue={JSON.stringify(editingChangeRequest.payload || {}, null, 2)} className={inputClass} /></div>
+                    <div className="flex gap-3">
+                      <button type="submit" disabled={loading} className="px-4 py-2 bg-green-500 text-white text-sm rounded-full hover:bg-green-600 disabled:opacity-50 flex items-center gap-2">{loading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />} Approva</button>
+                      <button type="button" onClick={() => setEditingChangeRequest(null)} className="px-4 py-2 bg-surface border border-border text-foreground text-sm rounded-full">Annulla</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* Reject change request dialog */}
+            {showRejectChangeRequest && (
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-surface rounded-2xl border border-border max-w-md w-full">
+                  <div className="p-6 border-b border-border"><h2 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider">Rifiuta richiesta di modifica</h2></div>
+                  <div className="p-6 space-y-4">
+                    <div><label className="block text-sm text-muted mb-2">Note (opzionale)</label><textarea value={rejectChangeRequestNote} onChange={(e) => setRejectChangeRequestNote(e.target.value)} rows={3} className={inputClass} /></div>
+                    <div className="flex gap-3">
+                      <button onClick={() => handleRejectTeamChangeRequest(showRejectChangeRequest, rejectChangeRequestNote)} disabled={loading} className="px-4 py-2 bg-red-500 text-white text-sm rounded-full hover:bg-red-600 disabled:opacity-50">Conferma rifiuto</button>
+                      <button onClick={() => { setShowRejectChangeRequest(null); setRejectChangeRequestNote(""); }} className="px-4 py-2 bg-surface border border-border text-foreground text-sm rounded-full">Annulla</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Create squadra modal */}
+            {showCreateSquadra && (
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-surface rounded-2xl border border-border max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                  <div className="p-6 border-b border-border flex items-center justify-between">
+                    <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider">Crea squadra</h2>
+                    <button onClick={() => { setShowCreateSquadra(false); setDuplicateWarning(null); }} className="p-2 hover:bg-background rounded-lg"><X size={20} /></button>
+                  </div>
+                  <form ref={createSquadraFormRef} onSubmit={handleCreateSquadra} className="p-6 space-y-4">
+                    <input type="hidden" name="force_duplicate" value={forceDuplicateOk ? "1" : ""} readOnly />
+                    {duplicateWarning && (
+                      <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-sm">
+                        <p className="text-yellow-400 font-medium">Attenzione: esiste già una squadra con nome simile: {duplicateWarning.otherName}</p>
+                        <button type="button" onClick={() => { setForceDuplicateOk(true); setTimeout(() => createSquadraFormRef.current?.requestSubmit(), 0); }} className="mt-2 text-yellow-400 hover:text-yellow-300 underline">Salva comunque</button>
+                      </div>
+                    )}
+                    <div><label className="block text-sm text-muted mb-2">Nome *</label><input name="nome" required className={inputClass} /></div>
+                    <div><label className="block text-sm text-muted mb-2">Email</label><input name="email" type="email" className={inputClass} /></div>
+                    <div><label className="block text-sm text-muted mb-2">Telefono</label><input name="telefono" className={inputClass} /></div>
+                    <div><label className="block text-sm text-muted mb-2">Instagram</label><input name="instagram" className={inputClass} /></div>
+                    <div><label className="block text-sm text-muted mb-2">Motto</label><input name="motto" className={inputClass} /></div>
+                    <div><label className="block text-sm text-muted mb-2">Note admin</label><input name="admin_notes" className={inputClass} /></div>
+                    <div><label className="block text-sm text-muted mb-2">Giocatori (JSON opzionale)</label><textarea name="giocatori" rows={6} placeholder='[{"nome":"","cognome":"","ruolo":"","instagram":""}]' className={inputClass} /></div>
+                    <div className="flex gap-3">
+                      <button type="submit" disabled={loading} className="px-4 py-2 bg-green-500 text-white text-sm rounded-full hover:bg-green-600 disabled:opacity-50 flex items-center gap-2">{loading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />} Crea</button>
+                      <button type="button" onClick={() => { setShowCreateSquadra(false); setDuplicateWarning(null); }} className="px-4 py-2 bg-surface border border-border text-foreground text-sm rounded-full">Annulla</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* Edit squadra modal */}
+            {editingSquadra && (
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-surface rounded-2xl border border-border max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                  <div className="p-6 border-b border-border flex items-center justify-between">
+                    <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider">Modifica squadra</h2>
+                    <button onClick={() => { setEditingSquadra(null); setDuplicateWarning(null); }} className="p-2 hover:bg-background rounded-lg"><X size={20} /></button>
+                  </div>
+                  <form ref={editSquadraFormRef} onSubmit={handleUpdateSquadra} className="p-6 space-y-4">
+                    <input type="hidden" name="force_duplicate" value={forceDuplicateOk ? "1" : ""} readOnly />
+                    {duplicateWarning && (
+                      <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-sm">
+                        <p className="text-yellow-400 font-medium">Attenzione: esiste già una squadra con nome simile: {duplicateWarning.otherName}</p>
+                        <button type="button" onClick={() => { setForceDuplicateOk(true); setTimeout(() => editSquadraFormRef.current?.requestSubmit(), 0); }} className="mt-2 text-yellow-400 hover:text-yellow-300 underline">Salva comunque</button>
+                      </div>
+                    )}
+                    <div><label className="block text-sm text-muted mb-2">Nome *</label><input name="nome" defaultValue={editingSquadra.nome} required className={inputClass} /></div>
+                    <div><label className="block text-sm text-muted mb-2">Email</label><input name="email" type="email" defaultValue={editingSquadra.email ?? ""} className={inputClass} /></div>
+                    <div><label className="block text-sm text-muted mb-2">Telefono</label><input name="telefono" defaultValue={editingSquadra.telefono ?? ""} className={inputClass} /></div>
+                    <div><label className="block text-sm text-muted mb-2">Instagram</label><input name="instagram" defaultValue={editingSquadra.instagram ?? ""} className={inputClass} /></div>
+                    <div><label className="block text-sm text-muted mb-2">Motto</label><input name="motto" defaultValue={editingSquadra.motto ?? ""} className={inputClass} /></div>
+                    <div><label className="block text-sm text-muted mb-2">Note admin</label><input name="admin_notes" defaultValue={editingSquadra.admin_notes ?? ""} className={inputClass} /></div>
+                    <div><label className="block text-sm text-muted mb-2">Giocatori (JSON)</label><textarea name="giocatori" rows={8} defaultValue={JSON.stringify(editingSquadra.giocatori ?? [], null, 2)} className={inputClass} /></div>
+                    <div className="border-t border-border pt-4">
+                      <p className="text-xs text-muted mb-2">Risultati</p>
+                      {data?.risultati.filter((r: { squadra_id: string }) => r.squadra_id === editingSquadra.id).map((r: { id: string; posizione: number; punti: number; tappe: { nome: string } }) => (
+                        <div key={r.id} className="flex items-center justify-between py-2 border-b border-border/50 text-sm">
+                          <span>{r.tappe?.nome} — {r.posizione}° · {r.punti} pt</span>
+                          <button type="button" onClick={() => handleDeleteRisultato(r.id)} className="text-red-400 hover:text-red-300 text-xs">Elimina</button>
+                        </div>
+                      ))}
+                      {(!data?.risultati?.length || data.risultati.filter((r: { squadra_id: string }) => r.squadra_id === editingSquadra.id).length === 0) && <p className="text-muted text-sm">Nessun risultato</p>}
+                    </div>
+                    <div className="flex gap-3 pt-4">
+                      <button type="submit" disabled={loading} className="px-4 py-2 bg-primary text-white text-sm rounded-full hover:bg-primary-dark disabled:opacity-50 flex items-center gap-2">{loading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />} Salva</button>
+                      <button type="button" onClick={() => { setEditingSquadra(null); setDuplicateWarning(null); }} className="px-4 py-2 bg-surface border border-border text-foreground text-sm rounded-full">Chiudi</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* Squadre list */}
+            {data && data.squadre.length > 0 && (
+              <div className="space-y-3">
+                {data.squadre.map((sq) => {
+                  const stats = getSquadraStats(sq.id);
+                  const pendingChange = hasPendingChangeRequest(sq.id);
+                  return (
+                    <div key={sq.id} className="p-4 bg-surface rounded-xl border border-border flex flex-wrap items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium">{sq.nome}</span>
+                          {!sq.auth_user_id && <span className="px-2 py-0.5 bg-muted/30 text-muted text-xs rounded-full">Non collegata</span>}
+                          {pendingChange && <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded-full">Richiesta modifica</span>}
+                        </div>
+                        <p className="text-sm text-muted mt-1">{sq.email ?? "—"}</p>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-muted">
+                        <span>{stats.tappe_giocate} tappe</span>
+                        <span>{stats.punti_totali} pt</span>
+                      </div>
+                      <button onClick={() => setEditingSquadra(sq)} className="px-4 py-2 bg-surface border border-border text-foreground text-sm rounded-full hover:bg-background flex items-center gap-2">
+                        <Edit2 size={14} /> Modifica
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {data && data.squadre.length === 0 && (
+              <div className="p-12 bg-surface rounded-2xl border border-dashed border-border text-center">
+                <Users size={48} className="mx-auto mb-4 text-primary/30" />
+                <p className="text-muted">Nessuna squadra. Aggiungi una squadra o approva richieste dal tab Richieste squadre.</p>
               </div>
             )}
           </div>

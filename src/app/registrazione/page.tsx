@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Users, Plus, Trash2, Eye, EyeOff, Loader2, CheckCircle } from "lucide-react";
-import { signup } from "@/app/actions/auth";
+import { submitTeamApplication } from "@/app/actions/team-application";
 import AckModal from "@/components/AckModal";
 
 interface GiocatoreForm {
@@ -22,6 +22,7 @@ export default function RegistrazionePage() {
   ]);
   const [accettaPrivacy, setAccettaPrivacy] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const addGiocatore = () => {
@@ -62,12 +63,23 @@ export default function RegistrazionePage() {
     const formData = new FormData(e.currentTarget);
     formData.set("giocatori", JSON.stringify(giocatori));
 
-    const result = await signup(formData);
+    const result = await submitTeamApplication(formData);
 
     if (result?.error) {
       setError(result.error);
       setLoading(false);
+      return;
     }
+    if (result?.success) {
+      setSuccess(true);
+      (e.target as HTMLFormElement).reset();
+      setGiocatori([
+        { nome: "", cognome: "", ruolo: "", instagram: "" },
+        { nome: "", cognome: "", ruolo: "", instagram: "" },
+        { nome: "", cognome: "", ruolo: "", instagram: "" },
+      ]);
+    }
+    setLoading(false);
   }
 
   return (
@@ -106,6 +118,13 @@ export default function RegistrazionePage() {
           variant="error"
           title="Errore di registrazione"
           message={error}
+        />
+        <AckModal
+          open={success}
+          onClose={() => setSuccess(false)}
+          variant="success"
+          title="Richiesta inviata"
+          message="La tua richiesta di iscrizione è stata inviata. Riceverai un'email quando la squadra sarà approvata dall'organizzazione. Controlla la casella di posta (anche spam)."
         />
 
         {/* Form */}

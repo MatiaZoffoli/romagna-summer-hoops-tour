@@ -11,12 +11,13 @@ create extension if not exists "uuid-ossp";
 -- ============================================
 create table public.squadre (
   id uuid default uuid_generate_v4() primary key,
-  auth_user_id uuid references auth.users(id) on delete cascade unique,
+  auth_user_id uuid references auth.users(id) on delete set null unique,
   nome text not null,
   motto text,
   instagram text,
-  email text not null,
+  email text,
   telefono text,
+  admin_notes text,
   created_at timestamp with time zone default now()
 );
 
@@ -180,8 +181,67 @@ create policy "News are viewable by everyone"
 create policy "Anyone can submit applications"
   on public.tappa_applications for insert with check (true);
 
+-- ============================================
+-- TEAM APPLICATIONS (Squadra registration for approval)
+-- ============================================
+create table public.team_applications (
+  id uuid default uuid_generate_v4() primary key,
+  email text not null,
+  password_plain text,
+  nome_squadra text not null,
+  motto text,
+  instagram text,
+  telefono text,
+  giocatori jsonb not null default '[]',
+  stato text default 'pending' check (stato in ('pending', 'approved', 'rejected')),
+  created_at timestamp with time zone default now(),
+  reviewed_at timestamp with time zone,
+  reviewed_by text
+);
+
+alter table public.team_applications enable row level security;
+
+create policy "Anyone can submit team application"
+  on public.team_applications for insert with check (true);
+
+-- ============================================
+-- TEAM CHANGE REQUESTS (team requests change, admin approves)
+-- ============================================
+create table public.team_change_requests (
+  id uuid default uuid_generate_v4() primary key,
+  squadra_id uuid references public.squadre(id) on delete cascade not null,
+  requested_by uuid references auth.users(id) on delete set null,
+  payload jsonb not null default '{}',
+  stato text default 'pending' check (stato in ('pending', 'approved', 'rejected')),
+  created_at timestamp with time zone default now(),
+  reviewed_at timestamp with time zone,
+  admin_notes text
+);
+
+create index team_change_requests_squadra_id on public.team_change_requests(squadra_id);
+create index team_change_requests_stato on public.team_change_requests(stato);
+
+alter table public.team_change_requests enable row level security;
+
+create policy "Users can insert own team change request"
+  on public.team_change_requests for insert
+  with check (
+    exists (
+      select 1 from public.squadre
+      where squadre.id = squadra_id and squadre.auth_user_id = auth.uid()
+    )
+  );
+
+create policy "Users can select own team change requests"
+  on public.team_change_requests for select
+  using (
+    exists (
+      select 1 from public.squadre
+      where squadre.id = squadra_id and squadre.auth_user_id = auth.uid()
+    )
+  );
+
 -- Note: Reading applications requires admin access (handled via admin password in server actions)
--- No public select policy - only admins can view via admin panel
 
 -- ============================================
 -- SEED DATA: Initial tappe

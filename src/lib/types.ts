@@ -4,13 +4,25 @@
 
 export interface DbSquadra {
   id: string;
-  auth_user_id: string;
+  auth_user_id: string | null;
   nome: string;
   motto: string | null;
   instagram: string | null;
-  email: string;
+  email: string | null;
   telefono: string | null;
+  admin_notes: string | null;
   created_at: string;
+}
+
+export interface DbTeamChangeRequest {
+  id: string;
+  squadra_id: string;
+  requested_by: string | null;
+  payload: Record<string, unknown>;
+  stato: "pending" | "approved" | "rejected";
+  created_at: string;
+  reviewed_at: string | null;
+  admin_notes: string | null;
 }
 
 export interface DbGiocatore {

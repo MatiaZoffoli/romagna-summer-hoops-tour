@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { User, Edit, Trophy, MapPin, LogOut, Save, Plus, Trash2, Loader2 } from "lucide-react";
 import { logout } from "@/app/actions/auth";
-import { updateTeamProfile } from "@/app/actions/team";
+import { submitTeamChangeRequest } from "@/app/actions/team-change-request";
 import type { DbSquadra, DbGiocatore } from "@/lib/types";
 import AckModal from "@/components/AckModal";
 
@@ -67,7 +67,7 @@ export default function DashboardClient({
     const formData = new FormData(e.currentTarget);
     formData.set("giocatori", JSON.stringify(giocatori));
 
-    const result = await updateTeamProfile(formData);
+    const result = await submitTeamChangeRequest(formData);
 
     if (result?.error) {
       setError(result.error);
@@ -139,8 +139,8 @@ export default function DashboardClient({
           open={saved}
           onClose={() => setSaved(false)}
           variant="success"
-          title="Modifiche salvate"
-          message="Modifiche salvate con successo!"
+          title="Richiesta inviata"
+          message="La tua richiesta di modifica è stata inviata. Riceverai un esito dopo la revisione da parte dell'organizzazione."
         />
 
         <form onSubmit={handleSave}>
@@ -283,7 +283,7 @@ export default function DashboardClient({
             className="w-full px-6 py-4 bg-primary text-white font-bold rounded-full hover:bg-primary-dark transition-colors flex items-center justify-center gap-2 text-lg disabled:opacity-50"
           >
             {saving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
-            {saving ? "Salvataggio..." : "Salva Modifiche"}
+            {saving ? "Invio in corso..." : "Richiedi modifica"}
           </button>
         </form>
 
