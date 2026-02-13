@@ -197,8 +197,8 @@ export async function getAdminData(password: string) {
     supabase.from("risultati").select("*, tappe(nome), squadre(nome)").order("created_at", { ascending: false }),
     supabase.from("news").select("*").order("created_at", { ascending: false }),
     supabase.from("tappa_applications").select("*").order("created_at", { ascending: false }),
-    supabase.from("team_applications").select("*").order("created_at", { ascending: false }).then((r) => r).catch(() => ({ data: [] })),
-    supabase.from("team_change_requests").select("*").order("created_at", { ascending: false }).then((r) => r).catch(() => ({ data: [] })),
+    Promise.resolve(supabase.from("team_applications").select("*").order("created_at", { ascending: false })).catch(() => ({ data: [] })),
+    Promise.resolve(supabase.from("team_change_requests").select("*").order("created_at", { ascending: false })).catch(() => ({ data: [] })),
   ]);
 
   return {
