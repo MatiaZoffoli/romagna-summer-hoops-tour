@@ -1,16 +1,47 @@
 "use client";
 
 import { useState } from "react";
-import { Shield, Trophy, Plus, Newspaper, MapPin, Loader2, CheckCircle, Lock, FileText, X, Eye, Edit2 } from "lucide-react";
+import { Shield, Trophy, Plus, Newspaper, MapPin, Loader2, CheckCircle, Lock, FileText, X, Eye, Edit2, Copy, ImageIcon } from "lucide-react";
 import { addTappaResult, updateTappaStatus, addNews, addTappa, getAdminData, approveTappaApplication, rejectTappaApplication, sendTestEmail } from "@/app/actions/admin";
 import { sistemaPunteggio } from "@/data/placeholder";
 import AckModal from "@/components/AckModal";
+
+function NewsCaptionRow({ id, titolo, instagramCaption }: { id: string; titolo: string; instagramCaption: string | null }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    if (!instagramCaption?.trim()) return;
+    try {
+      await navigator.clipboard.writeText(instagramCaption.trim());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
+  return (
+    <li className="flex items-center justify-between gap-4 p-3 bg-background rounded-xl border border-border">
+      <span className="text-sm font-medium truncate flex-1">{titolo}</span>
+      {instagramCaption?.trim() ? (
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-full border border-border hover:border-primary hover:text-primary transition-colors shrink-0"
+        >
+          {copied ? <CheckCircle size={14} /> : <Copy size={14} />}
+          {copied ? "Copiato!" : "Copia caption"}
+        </button>
+      ) : (
+        <span className="text-xs text-muted shrink-0">Nessuna bozza</span>
+      )}
+    </li>
+  );
+}
 
 interface AdminData {
   tappe: { id: string; slug: string; nome: string; stato: string }[];
   squadre: { id: string; nome: string }[];
   risultati: { id: string; posizione: number; punti: number; tappe: { nome: string }; squadre: { nome: string } }[];
-  news: { id: string; titolo: string; data: string }[];
+  news: { id: string; titolo: string; data: string; instagram_caption: string | null }[];
   applications: {
     id: string;
     nome_organizzatore: string;
@@ -518,11 +549,42 @@ export default function AdminPage() {
                 <label className="block text-sm text-muted mb-2">Contenuto *</label>
                 <textarea name="contenuto" required rows={6} placeholder="Contenuto completo dell'articolo..." className={inputClass} />
               </div>
+              <div>
+                <label className="block text-sm text-muted mb-2 flex items-center gap-2">
+                  <ImageIcon size={14} /> Immagine (URL opzionale)
+                </label>
+                <input name="image_url" type="url" placeholder="https://..." className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-sm text-muted mb-2">Bozza caption Instagram (opzionale)</label>
+                <textarea
+                  name="instagram_caption"
+                  rows={4}
+                  placeholder="Testo da copiare nel post Instagram..."
+                  className={inputClass}
+                  maxLength={2200}
+                />
+                <p className="text-xs text-muted mt-1">
+                  Limite Instagram: 2.200 caratteri. Usa &quot;Copia caption&quot; dopo aver pubblicato la news.
+                </p>
+              </div>
               <button type="submit" disabled={loading} className="px-6 py-3 bg-primary text-white font-bold rounded-full hover:bg-primary-dark transition-colors flex items-center gap-2 disabled:opacity-50">
                 {loading ? <Loader2 size={16} className="animate-spin" /> : <Newspaper size={16} />}
                 Pubblica News
               </button>
             </form>
+            {data?.news && data.news.length > 0 && (
+              <div className="mt-8 pt-8 border-t border-border">
+                <h3 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider mb-4">
+                  COPIA CAPTION (ultime news)
+                </h3>
+                <ul className="space-y-3">
+                  {data.news.slice(0, 5).map((n) => (
+                    <NewsCaptionRow key={n.id} id={n.id} titolo={n.titolo} instagramCaption={n.instagram_caption ?? null} />
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
 

@@ -234,6 +234,8 @@ export async function getNews(): Promise<DbNews[]> {
       contenuto: n.contenuto,
       anteprima: n.anteprima,
       data: n.data,
+      image_url: null,
+      instagram_caption: null,
       created_at: new Date().toISOString(),
     }));
   }
@@ -244,7 +246,17 @@ export async function getNews(): Promise<DbNews[]> {
     .select("*")
     .order("created_at", { ascending: false });
 
-  return data || [];
+  const rows = data ?? [];
+  return rows.map((row: Record<string, unknown>) => ({
+    id: String(row.id),
+    titolo: String(row.titolo ?? ""),
+    contenuto: String(row.contenuto ?? ""),
+    anteprima: String(row.anteprima ?? ""),
+    data: String(row.data ?? ""),
+    image_url: row.image_url != null ? String(row.image_url) : null,
+    instagram_caption: row.instagram_caption != null ? String(row.instagram_caption) : null,
+    created_at: row.created_at != null ? String(row.created_at) : new Date().toISOString(),
+  }));
 }
 
 // ============================================

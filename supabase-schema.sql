@@ -76,6 +76,8 @@ create table public.news (
   contenuto text not null,
   anteprima text not null,
   data text not null,
+  image_url text,
+  instagram_caption text,
   created_at timestamp with time zone default now()
 );
 
@@ -193,4 +195,4 @@ values
 insert into public.news (titolo, contenuto, anteprima, data)
 values
   ('Nasce il Romagna Summer Hoops Tour!', 'E'' con grande entusiasmo che annunciamo la nascita del Romagna Summer Hoops Tour, il primo circuito estivo di basket 3x3 che unisce i tornei della Romagna in un''unica grande esperienza. Da Rimini a Ravenna, da Cesena a Forli, l''estate 2026 sara'' all''insegna dello streetball. Preparatevi a vivere un''estate indimenticabile tra canestri, musica e buone vibes. Restate sintonizzati per tutte le novita''!', 'Il primo circuito estivo di basket 3x3 in Romagna e'' ufficiale. Un''estate di canestri, musica e street culture ti aspetta.', '9 Febbraio 2026'),
-  ('Le prime tappe sono confermate!', 'Il calendario del Romagna Summer Hoops Tour inizia a prendere forma! Siamo felici di annunciare le prime due tappe ufficiali: il KOTG (Kings of the Ghetto) a Cesenatico (11 Luglio) e il Torneo di San Piero (25 Luglio). Altre tappe saranno annunciate nelle prossime settimane. Seguite i nostri canali per non perdere nessun aggiornamento!', 'KOTG a Cesenatico e il Torneo di San Piero aprono il calendario ufficiale del Tour.', '9 Febbraio 2026');
+  ('Abbiamo la prima tappa confermata!', 'Il calendario del Romagna Summer Hoops Tour inizia a prendere forma! Siamo felici di annunciare la prima tappa ufficiale: il KOTG, la seconda edizione del Kings of the Ghetto, organizzato dal team Ghetto Ponente, si volgerà a Cesenatico, l'11 Luglio. Altre tappe saranno annunciate nelle prossime settimane. Seguite i nostri canali per non perdere nessun aggiornamento!', 'Il KOTG 2nd Edition a Cesenatico apre il calendario ufficiale del Tour.', '12 Febbraio 2026');

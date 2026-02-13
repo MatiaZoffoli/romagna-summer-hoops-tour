@@ -56,6 +56,8 @@ export interface DbNews {
   contenuto: string;
   anteprima: string;
   data: string;
+  image_url: string | null;
+  instagram_caption: string | null;
   created_at: string;
 }
 

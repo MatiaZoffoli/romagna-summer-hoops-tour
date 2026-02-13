@@ -86,6 +86,8 @@ export async function addNews(formData: FormData) {
   const titolo = formData.get("titolo") as string;
   const contenuto = formData.get("contenuto") as string;
   const anteprima = formData.get("anteprima") as string;
+  const imageUrl = (formData.get("image_url") as string)?.trim() || null;
+  const instagramCaption = (formData.get("instagram_caption") as string)?.trim() || null;
 
   if (!titolo || !contenuto || !anteprima) {
     return { error: "Tutti i campi sono obbligatori." };
@@ -103,6 +105,8 @@ export async function addNews(formData: FormData) {
     contenuto,
     anteprima,
     data,
+    image_url: imageUrl,
+    instagram_caption: instagramCaption,
   });
 
   if (error) {
@@ -311,6 +315,8 @@ export async function approveTappaApplication(formData: FormData) {
         contenuto: generated.contenuto,
         anteprima: generated.anteprima,
         data: dataNews,
+        image_url: null,
+        instagram_caption: null,
       });
       revalidatePath("/news");
       revalidatePath("/");

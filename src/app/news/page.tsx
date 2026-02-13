@@ -28,18 +28,30 @@ export default async function NewsPage() {
             <article
               key={n.id}
               id={n.id}
-              className="p-8 bg-surface rounded-2xl border border-border scroll-mt-24"
+              className="overflow-hidden bg-surface rounded-2xl border border-border scroll-mt-24"
             >
-              <div className="flex items-center gap-3 mb-4">
-                <Newspaper size={16} className="text-primary" />
-                <span className="text-xs text-primary uppercase tracking-wider font-semibold">
-                  {n.data}
-                </span>
+              {n.image_url && (
+                <div className="relative w-full aspect-video bg-muted/30">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={n.image_url}
+                    alt=""
+                    className="object-cover w-full h-full"
+                  />
+                </div>
+              )}
+              <div className="p-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <Newspaper size={16} className="text-primary" />
+                  <span className="text-xs text-primary uppercase tracking-wider font-semibold">
+                    {n.data}
+                  </span>
+                </div>
+                <h2 className="font-[family-name:var(--font-bebas)] text-3xl tracking-wider mb-4">
+                  {n.titolo}
+                </h2>
+                <p className="text-muted leading-relaxed">{n.contenuto}</p>
               </div>
-              <h2 className="font-[family-name:var(--font-bebas)] text-3xl tracking-wider mb-4">
-                {n.titolo}
-              </h2>
-              <p className="text-muted leading-relaxed">{n.contenuto}</p>
             </article>
           ))}
         </div>

@@ -301,14 +301,22 @@ export default async function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {newsItems.slice(0, 2).map((n) => (
               <Link key={n.id} href={`/news#${n.id}`}>
-                <div className="p-6 bg-surface rounded-2xl border border-border hover:border-primary/30 transition-all group h-full">
-                  <p className="text-xs text-primary mb-2 uppercase tracking-wider">
-                    {n.data}
-                  </p>
-                  <h3 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider mb-3 group-hover:text-primary transition-colors">
-                    {n.titolo}
-                  </h3>
-                  <p className="text-sm text-muted leading-relaxed">{n.anteprima}</p>
+                <div className="overflow-hidden bg-surface rounded-2xl border border-border hover:border-primary/30 transition-all group h-full">
+                  {n.image_url && (
+                    <div className="relative w-full aspect-video bg-muted/30">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={n.image_url} alt="" className="object-cover w-full h-full" />
+                    </div>
+                  )}
+                  <div className="p-6">
+                    <p className="text-xs text-primary mb-2 uppercase tracking-wider">
+                      {n.data}
+                    </p>
+                    <h3 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider mb-3 group-hover:text-primary transition-colors">
+                      {n.titolo}
+                    </h3>
+                    <p className="text-sm text-muted leading-relaxed">{n.anteprima}</p>
+                  </div>
                 </div>
               </Link>
             ))}
