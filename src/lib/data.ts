@@ -196,6 +196,7 @@ export async function getSquadreConPunti(): Promise<SquadraConPunti[]> {
         instagram: s.instagram || null,
         email: "",
         telefono: null,
+        admin_notes: null,
         created_at: new Date().toISOString(),
         giocatori: s.giocatori.map((g) => ({
           id: "",
