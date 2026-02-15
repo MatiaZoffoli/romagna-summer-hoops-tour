@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { getTappe } from "@/lib/data";
 import DashboardClient from "./DashboardClient";
 
 export default async function DashboardPage() {
@@ -34,11 +35,14 @@ export default async function DashboardPage() {
   // Get results and count
   const { data: risultati } = await supabase
     .from("risultati")
-    .select("*")
+    .select("tappa_id, punti")
     .eq("squadra_id", squadra.id);
 
-  const puntiTotali = (risultati || []).reduce((sum, r) => sum + r.punti, 0);
+  const [tappe] = await Promise.all([getTappe()]);
+
+  const puntiTotali = (risultati || []).reduce((sum, r) => sum + (r as { punti: number }).punti, 0);
   const tappeGiocate = (risultati || []).length;
+  const risultatiTappaIds = (risultati || []).map((r) => (r as { tappa_id: string }).tappa_id);
 
   return (
     <DashboardClient
@@ -46,6 +50,8 @@ export default async function DashboardPage() {
       giocatori={giocatori || []}
       puntiTotali={puntiTotali}
       tappeGiocate={tappeGiocate}
+      tappe={tappe}
+      risultatiTappaIds={risultatiTappaIds}
     />
   );
 }

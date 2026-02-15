@@ -32,10 +32,15 @@ export default async function TappePage() {
           <h1 className="font-[family-name:var(--font-bebas)] text-6xl sm:text-7xl tracking-wider mb-6">
             LE <span className="gradient-text">TAPPE</span>
           </h1>
-          <p className="text-lg text-muted">
+          <p className="text-lg text-muted mb-4">
             Ogni tappa è un torneo 3x3 indipendente che assegna punti per la classifica
             generale del Tour. Contatta direttamente l&apos;organizzatore per iscriverti.
           </p>
+          <Link href="/tappe/mappa" className="inline-flex items-center gap-2 text-sm text-primary hover:text-gold transition-colors">
+            <MapPin size={16} />
+            Vedi la mappa del Tour
+            <ArrowRight size={14} />
+          </Link>
         </div>
 
         {/* Tappe grid */}

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Shield, Trophy, Plus, Newspaper, MapPin, Loader2, CheckCircle, Lock, FileText, X, Eye, Edit2, Copy, ImageIcon, Users } from "lucide-react";
-import { addTappaResult, updateTappaStatus, addNews, addTappa, getAdminData, approveTappaApplication, rejectTappaApplication, approveTeamApplication, rejectTeamApplication, createSquadraAdmin, updateSquadraAdmin, deleteRisultatoAdmin, approveTeamChangeRequest, rejectTeamChangeRequest, sendTestEmail } from "@/app/actions/admin";
+import { Shield, Trophy, Plus, Newspaper, MapPin, Loader2, CheckCircle, Lock, FileText, X, Eye, Edit2, Copy, ImageIcon, Users, Share2, Award } from "lucide-react";
+import { addTappaResult, updateTappaStatus, addNews, addTappa, getAdminData, approveTappaApplication, rejectTappaApplication, approveTeamApplication, rejectTeamApplication, createSquadraAdmin, updateSquadraAdmin, deleteRisultatoAdmin, approveTeamChangeRequest, rejectTeamChangeRequest, sendTestEmail, approveSocialBonusRequest, rejectSocialBonusRequest, createMvp, updateMvp, deleteMvp } from "@/app/actions/admin";
 import { sistemaPunteggio } from "@/data/placeholder";
 import AckModal from "@/components/AckModal";
 import { AVATAR_ICON_OPTIONS, AVATAR_COLOR_OPTIONS } from "@/lib/avatar-presets";
@@ -87,6 +87,26 @@ interface AdminData {
     stato: string;
     created_at: string;
   }[];
+  socialBonusRequests: {
+    id: string;
+    squadra_id: string;
+    tappa_id: string;
+    link_to_post: string | null;
+    squadre: { nome: string } | null;
+    tappe: { nome: string; slug: string } | null;
+  }[];
+  mvps: {
+    id: string;
+    tappa_id: string;
+    nome: string;
+    cognome: string;
+    photo_url: string | null;
+    bio: string | null;
+    carriera: string | null;
+    stats: Record<string, unknown>;
+    ordine: number;
+    tappe: { nome: string; slug: string } | null;
+  }[];
 }
 
 export default function AdminPage() {
@@ -96,7 +116,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<"risultati" | "tappe" | "news" | "stato" | "applicazioni" | "squadre" | "gestione-squadre">("risultati");
+  const [activeTab, setActiveTab] = useState<"risultati" | "tappe" | "news" | "stato" | "applicazioni" | "squadre" | "gestione-squadre" | "bonus-social" | "mvp">("risultati");
   const [previewApp, setPreviewApp] = useState<AdminData["applications"][0] | null>(null);
   const [editingApp, setEditingApp] = useState<AdminData["applications"][0] | null>(null);
   const [previewTeamApp, setPreviewTeamApp] = useState<AdminData["teamApplications"][0] | null>(null);
@@ -110,6 +130,8 @@ export default function AdminPage() {
   const [editingChangeRequest, setEditingChangeRequest] = useState<AdminData["teamChangeRequests"][0] | null>(null);
   const [showRejectChangeRequest, setShowRejectChangeRequest] = useState<string | null>(null);
   const [rejectChangeRequestNote, setRejectChangeRequestNote] = useState("");
+  const [editingMvp, setEditingMvp] = useState<AdminData["mvps"][0] | null>(null);
+  const [showCreateMvp, setShowCreateMvp] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
 
   async function handleLogin() {
@@ -565,6 +587,8 @@ export default function AdminPage() {
             { id: "applicazioni" as const, label: `Tappe${data?.applications.filter(a => a.stato === 'pending').length ? ` (${data.applications.filter(a => a.stato === 'pending').length})` : ''}`, icon: FileText },
             { id: "squadre" as const, label: `Richieste squadre${data?.teamApplications.filter(t => t.stato === 'pending').length ? ` (${data.teamApplications.filter(t => t.stato === 'pending').length})` : ''}`, icon: Users },
             { id: "gestione-squadre" as const, label: "Gestione squadre", icon: Users },
+            { id: "bonus-social" as const, label: `Bonus social${data?.socialBonusRequests?.length ? ` (${data.socialBonusRequests.length})` : ""}`, icon: Share2 },
+            { id: "mvp" as const, label: "MVP", icon: Award },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -616,6 +640,22 @@ export default function AdminPage() {
                   <div>
                     <label className="block text-sm text-muted mb-2">Punti</label>
                     <input name="punti" type="number" min="0" required placeholder="Es: 100" className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-muted mb-2">Partite giocate (opz.)</label>
+                    <input name="partite_giocate" type="number" min="0" placeholder="Es: 5" className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-muted mb-2">Partite vinte (opz.)</label>
+                    <input name="partite_vinte" type="number" min="0" placeholder="Es: 3" className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-muted mb-2">Punti fatti (opz.)</label>
+                    <input name="punti_fatti" type="number" min="0" placeholder="Es: 85" className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-muted mb-2">Punti subiti (opz.)</label>
+                    <input name="punti_subiti" type="number" min="0" placeholder="Es: 72" className={inputClass} />
                   </div>
                 </div>
 
@@ -724,6 +764,14 @@ export default function AdminPage() {
                 <div>
                   <label className="block text-sm text-muted mb-2">Provincia</label>
                   <input name="provincia" placeholder="Es: Forli-Cesena" className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-sm text-muted mb-2">Latitudine (mappa)</label>
+                  <input name="lat" type="number" step="any" placeholder="Es: 44.199" className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-sm text-muted mb-2">Longitudine (mappa)</label>
+                  <input name="lng" type="number" step="any" placeholder="Es: 12.405" className={inputClass} />
                 </div>
                 <div>
                   <label className="block text-sm text-muted mb-2">Organizzatore</label>
@@ -1571,6 +1619,142 @@ export default function AdminPage() {
               <div className="p-12 bg-surface rounded-2xl border border-dashed border-border text-center">
                 <Users size={48} className="mx-auto mb-4 text-primary/30" />
                 <p className="text-muted">Nessuna squadra. Aggiungi una squadra o approva richieste dal tab Richieste squadre.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== BONUS SOCIAL ===== */}
+        {activeTab === "bonus-social" && (
+          <div className="p-8 bg-surface rounded-2xl border border-border">
+            <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider mb-2">Richieste bonus social (+5 pt)</h2>
+            <p className="text-sm text-muted mb-6">Le squadre richiedono il bonus per aver condiviso il template sui social. Approva per assegnare +5 punti per quella tappa.</p>
+            {data?.socialBonusRequests?.length ? (
+              <div className="space-y-3">
+                {data.socialBonusRequests.map((req) => (
+                  <div key={req.id} className="p-4 bg-background rounded-xl border border-border flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <span className="font-medium">{(req.squadre as { nome: string } | null)?.nome ?? req.squadra_id}</span>
+                      <span className="text-muted mx-2">—</span>
+                      <span className="text-muted">{(req.tappe as { nome: string } | null)?.nome ?? req.tappa_id}</span>
+                      {req.link_to_post && (
+                        <p className="text-sm mt-1">
+                          <a href={req.link_to_post} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-gold break-all">{req.link_to_post}</a>
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <form action={async (fd) => { const r = await approveSocialBonusRequest(fd); if (r?.error) setError(r.error); else { setMessage("Bonus approvato!"); await refreshData(); } }} className="inline">
+                        <input type="hidden" name="adminPassword" value={password} />
+                        <input type="hidden" name="requestId" value={req.id} />
+                        <button type="submit" disabled={loading} className="px-3 py-1.5 bg-green-500 text-white text-sm rounded-full hover:bg-green-600 disabled:opacity-50">Approva (+5 pt)</button>
+                      </form>
+                      <form action={async (fd) => { const r = await rejectSocialBonusRequest(fd); if (r?.error) setError(r.error); else { setMessage("Richiesta rifiutata."); await refreshData(); } }} className="inline">
+                        <input type="hidden" name="adminPassword" value={password} />
+                        <input type="hidden" name="requestId" value={req.id} />
+                        <button type="submit" disabled={loading} className="px-3 py-1.5 bg-red-500 text-white text-sm rounded-full hover:bg-red-600 disabled:opacity-50">Rifiuta</button>
+                      </form>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center text-muted">
+                <Share2 size={48} className="mx-auto mb-4 text-primary/30" />
+                <p>Nessuna richiesta bonus social in attesa.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== MVP ===== */}
+        {activeTab === "mvp" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider">MVP del Tour</h2>
+              <button type="button" onClick={() => { setShowCreateMvp(true); setEditingMvp(null); }} className="px-4 py-2 bg-primary text-white text-sm rounded-full hover:bg-primary-dark flex items-center gap-2">
+                <Plus size={14} /> Aggiungi MVP
+              </button>
+            </div>
+
+            {data?.mvps?.length ? (
+              <div className="space-y-2">
+                {data.mvps.map((mvp) => (
+                  <div key={mvp.id} className="p-4 bg-surface rounded-xl border border-border flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      {mvp.photo_url ? (
+                        <img src={mvp.photo_url} alt="" className="w-12 h-12 rounded-lg object-cover border border-border" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center"><Award size={20} className="text-primary/50" /></div>
+                      )}
+                      <div>
+                        <span className="font-medium">{mvp.nome} {mvp.cognome}</span>
+                        <span className="text-muted ml-2">— {(mvp.tappe as { nome: string } | null)?.nome ?? mvp.tappa_id}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => { setEditingMvp(mvp); setShowCreateMvp(false); }} className="px-3 py-1.5 bg-surface border border-border text-sm rounded-full hover:border-primary">Modifica</button>
+                      <form action={async (fd) => { const r = await deleteMvp(fd); if (r?.error) setError(r.error); else { setMessage("MVP eliminato."); await refreshData(); } }} className="inline">
+                        <input type="hidden" name="adminPassword" value={password} />
+                        <input type="hidden" name="id" value={mvp.id} />
+                        <button type="submit" className="px-3 py-1.5 bg-red-500/20 text-red-400 text-sm rounded-full hover:bg-red-500/30">Elimina</button>
+                      </form>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 bg-surface rounded-2xl border border-dashed border-border text-center text-muted">
+                <Award size={48} className="mx-auto mb-4 text-primary/30" />
+                <p>Nessun MVP. Aggiungi il primo.</p>
+              </div>
+            )}
+
+            {/* Create MVP form */}
+            {showCreateMvp && (
+              <div className="p-8 bg-surface rounded-2xl border border-border">
+                <h3 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider mb-4">Nuovo MVP</h3>
+                <form action={async (fd) => { const r = await createMvp(fd); if (r?.error) setError(r.error); else { setMessage("MVP aggiunto!"); setShowCreateMvp(false); await refreshData(); } }} className="space-y-4">
+                  <input type="hidden" name="adminPassword" value={password} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><label className="block text-sm text-muted mb-2">Tappa *</label><select name="tappa_id" required className={inputClass}>{data?.tappe.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}</select></div>
+                    <div><label className="block text-sm text-muted mb-2">Nome *</label><input name="nome" required className={inputClass} /></div>
+                    <div><label className="block text-sm text-muted mb-2">Cognome *</label><input name="cognome" required className={inputClass} /></div>
+                    <div><label className="block text-sm text-muted mb-2">URL foto</label><input name="photo_url" type="url" className={inputClass} /></div>
+                    <div><label className="block text-sm text-muted mb-2">Ordine</label><input name="ordine" type="number" defaultValue={0} className={inputClass} /></div>
+                  </div>
+                  <div><label className="block text-sm text-muted mb-2">Bio</label><textarea name="bio" rows={3} className={inputClass} /></div>
+                  <div><label className="block text-sm text-muted mb-2">Carriera</label><textarea name="carriera" rows={3} className={inputClass} /></div>
+                  <div><label className="block text-sm text-muted mb-2">Stats (JSON, es. {`{"punti_media": 12}`})</label><textarea name="stats" rows={2} className={inputClass} placeholder='{"punti_media": 12}' /></div>
+                  <div className="flex gap-3">
+                    <button type="submit" disabled={loading} className="px-4 py-2 bg-primary text-white rounded-full hover:bg-primary-dark disabled:opacity-50">Salva</button>
+                    <button type="button" onClick={() => setShowCreateMvp(false)} className="px-4 py-2 bg-surface border border-border rounded-full">Annulla</button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Edit MVP form */}
+            {editingMvp && !showCreateMvp && (
+              <div className="p-8 bg-surface rounded-2xl border border-border">
+                <h3 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider mb-4">Modifica MVP</h3>
+                <form action={async (fd) => { const r = await updateMvp(fd); if (r?.error) setError(r.error); else { setMessage("MVP aggiornato!"); setEditingMvp(null); await refreshData(); } }} className="space-y-4">
+                  <input type="hidden" name="adminPassword" value={password} />
+                  <input type="hidden" name="id" value={editingMvp.id} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><label className="block text-sm text-muted mb-2">Nome *</label><input name="nome" defaultValue={editingMvp.nome} required className={inputClass} /></div>
+                    <div><label className="block text-sm text-muted mb-2">Cognome *</label><input name="cognome" defaultValue={editingMvp.cognome} required className={inputClass} /></div>
+                    <div><label className="block text-sm text-muted mb-2">URL foto</label><input name="photo_url" type="url" defaultValue={editingMvp.photo_url ?? ""} className={inputClass} /></div>
+                    <div><label className="block text-sm text-muted mb-2">Ordine</label><input name="ordine" type="number" defaultValue={editingMvp.ordine} className={inputClass} /></div>
+                  </div>
+                  <div><label className="block text-sm text-muted mb-2">Bio</label><textarea name="bio" rows={3} defaultValue={editingMvp.bio ?? ""} className={inputClass} /></div>
+                  <div><label className="block text-sm text-muted mb-2">Carriera</label><textarea name="carriera" rows={3} defaultValue={editingMvp.carriera ?? ""} className={inputClass} /></div>
+                  <div><label className="block text-sm text-muted mb-2">Stats (JSON)</label><textarea name="stats" rows={2} defaultValue={JSON.stringify(editingMvp.stats || {}, null, 2)} className={inputClass} /></div>
+                  <div className="flex gap-3">
+                    <button type="submit" disabled={loading} className="px-4 py-2 bg-primary text-white rounded-full hover:bg-primary-dark disabled:opacity-50">Salva</button>
+                    <button type="button" onClick={() => setEditingMvp(null)} className="px-4 py-2 bg-surface border border-border rounded-full">Annulla</button>
+                  </div>
+                </form>
               </div>
             )}
           </div>

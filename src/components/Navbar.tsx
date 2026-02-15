@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Menu, X, Trophy, Users, MapPin, Newspaper, Star, Phone, LogIn, Camera } from "lucide-react";
+import { Menu, X, Trophy, Users, MapPin, Newspaper, Star, Phone, LogIn, Camera, Award } from "lucide-react";
 
 const navLinks = [
   { href: "/il-tour", label: "Il Tour", icon: Star },
@@ -10,6 +10,7 @@ const navLinks = [
   { href: "/classifica", label: "Classifica", icon: Trophy },
   { href: "/squadre", label: "Squadre", icon: Users },
   { href: "/finals", label: "The Finals", icon: Trophy },
+  { href: "/mvp", label: "MVP", icon: Award },
   { href: "/news", label: "News", icon: Newspaper },
   { href: "/gallery", label: "Gallery", icon: Camera },
   { href: "/sponsor", label: "Sponsor", icon: Star },

@@ -124,7 +124,7 @@ export default function RegistrazionePage() {
           onClose={() => setSuccess(false)}
           variant="success"
           title="Richiesta inviata"
-          message="La tua richiesta di iscrizione è stata inviata. Riceverai un'email quando la squadra sarà approvata dall'organizzazione. Controlla la casella di posta (anche spam)."
+          message={"La tua richiesta di iscrizione è stata inviata.\nRiceverai un'email quando la squadra sarà approvata dall'organizzazione.\nControlla la casella di posta (anche spam)."}
         />
 
         {/* Form */}

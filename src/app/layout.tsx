@@ -4,6 +4,8 @@ import localFont from "next/font/local";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import TappaPromoPopup from "@/components/TappaPromoPopup";
+import { getProssimaTappaPromo } from "@/lib/data";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -53,17 +55,20 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const prossimaTappaPromo = await getProssimaTappaPromo();
+
   return (
     <html lang="it">
       <body className={`${inter.variable} ${bebas.variable} antialiased`}>
         <Navbar />
         <main className="min-h-screen">{children}</main>
         <Footer />
+        <TappaPromoPopup tappa={prossimaTappaPromo} />
       </body>
     </html>
   );

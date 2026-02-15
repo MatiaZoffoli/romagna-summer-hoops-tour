@@ -1,20 +1,23 @@
 import Link from "next/link";
-import { Trophy, Info } from "lucide-react";
+import { Trophy, Info, Lock } from "lucide-react";
 import { getClassifica } from "@/lib/data";
+import ClassificaLiveRefresh from "@/components/ClassificaLiveRefresh";
 
 export const revalidate = 60;
 
 export default async function ClassificaPage() {
-  const { squadre: classificaOrdinata, squadreConUnaTappa, tappe } = await getClassifica();
+  const { squadre: classificaOrdinata, tappe } = await getClassifica();
 
   const tappeCompletate = tappe.filter((t) => t.stato === "conclusa").length;
+  const squadreInGraduatoria = classificaOrdinata.filter((s) => s.tappe_giocate >= 2).length;
 
-  // Dynamic grid columns: # + Squadra + N tappe + Tappe count + Punti
-  const desktopCols = `60px 1fr repeat(${tappe.length}, 80px) 80px 100px`;
-  const mobileCols = "50px 1fr 60px 80px";
+  // Dynamic grid columns: # + Squadra + N tappe + Tappe + Social + Punti
+  const desktopCols = `60px 1fr repeat(${tappe.length}, 80px) 80px 60px 100px`;
+  const mobileCols = "50px 1fr 60px 50px 80px";
 
   return (
     <div className="pt-24 pb-20">
+      <ClassificaLiveRefresh />
       <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
         <div className="max-w-3xl mb-12">
@@ -34,7 +37,7 @@ export default async function ClassificaPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
           <div className="p-4 bg-surface rounded-xl border border-border text-center">
             <p className="font-[family-name:var(--font-bebas)] text-3xl text-primary">
-              {classificaOrdinata.length}
+              {squadreInGraduatoria}
             </p>
             <p className="text-xs text-muted uppercase tracking-wider">Squadre (≥2 tappe)</p>
           </div>
@@ -82,6 +85,7 @@ export default async function ClassificaPage() {
               </span>
             ))}
             <span className="text-center">Tappe</span>
+            <span className="text-center" title="Bonus social (+5 pt per tappa)">Social</span>
             <span className="text-right">Punti</span>
           </div>
 
@@ -93,37 +97,40 @@ export default async function ClassificaPage() {
             <span>#</span>
             <span>Squadra</span>
             <span className="text-center">Tappe</span>
+            <span className="text-center">Social</span>
             <span className="text-right">Punti</span>
           </div>
 
           {classificaOrdinata.length > 0 ? (
             classificaOrdinata.map((sq, i) => {
-              const slug = sq.nome.toLowerCase().replace(/\s+/g, "-");
+              const inGraduatoria = sq.tappe_giocate >= 2;
+              const rowOpacity = inGraduatoria ? (i < 16 ? "" : "opacity-60") : "opacity-60";
+              const rankColor =
+                inGraduatoria && i === 0
+                  ? "text-gold"
+                  : inGraduatoria && i === 1
+                  ? "text-gray-400"
+                  : inGraduatoria && i === 2
+                  ? "text-orange-600"
+                  : "text-muted";
               return (
                 <Link key={sq.id} href={`/squadre/${sq.id}`}>
                   {/* Desktop row */}
                   <div
-                    className={`hidden sm:grid items-center px-6 py-4 border-b border-border/50 hover:bg-surface-light transition-colors ${
-                      i < 16 ? "" : "opacity-50"
-                    }`}
+                    className={`hidden sm:grid items-center px-6 py-4 border-b border-border/50 hover:bg-surface-light transition-colors ${rowOpacity}`}
                     style={{ gridTemplateColumns: desktopCols }}
                   >
-                    <span
-                      className={`font-[family-name:var(--font-bebas)] text-2xl ${
-                        i === 0
-                          ? "text-gold"
-                          : i === 1
-                          ? "text-gray-400"
-                          : i === 2
-                          ? "text-orange-600"
-                          : "text-muted"
-                      }`}
-                    >
+                    <span className={`font-[family-name:var(--font-bebas)] text-2xl ${rankColor}`}>
                       {i + 1}
                     </span>
                     <div>
                       <span className="font-semibold text-foreground">{sq.nome}</span>
-                      {sq.motto && (
+                      {!inGraduatoria && (
+                        <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
+                          <Lock size={10} /> Non in classifica — servono almeno 2 tappe
+                        </p>
+                      )}
+                      {sq.motto && inGraduatoria && (
                         <p className="text-xs text-muted">{sq.motto}</p>
                       )}
                     </div>
@@ -138,6 +145,9 @@ export default async function ClassificaPage() {
                       );
                     })}
                     <span className="text-center text-muted">{sq.tappe_giocate}</span>
+                    <span className="text-center text-muted" title="Bonus social">
+                      {(sq as { bonus_social_count?: number }).bonus_social_count ? (sq as { bonus_social_count: number }).bonus_social_count : "—"}
+                    </span>
                     <span className="text-right font-[family-name:var(--font-bebas)] text-xl text-primary">
                       {sq.punti_totali}
                     </span>
@@ -145,26 +155,24 @@ export default async function ClassificaPage() {
 
                   {/* Mobile row */}
                   <div
-                    className={`grid sm:hidden items-center px-4 py-4 border-b border-border/50 hover:bg-surface-light transition-colors ${
-                      i < 16 ? "" : "opacity-50"
-                    }`}
+                    className={`grid sm:hidden items-center px-4 py-4 border-b border-border/50 hover:bg-surface-light transition-colors ${rowOpacity}`}
                     style={{ gridTemplateColumns: mobileCols }}
                   >
-                    <span
-                      className={`font-[family-name:var(--font-bebas)] text-2xl ${
-                        i === 0
-                          ? "text-gold"
-                          : i === 1
-                          ? "text-gray-400"
-                          : i === 2
-                          ? "text-orange-600"
-                          : "text-muted"
-                      }`}
-                    >
+                    <span className={`font-[family-name:var(--font-bebas)] text-2xl ${rankColor}`}>
                       {i + 1}
                     </span>
-                    <span className="font-semibold text-foreground">{sq.nome}</span>
+                    <div>
+                      <span className="font-semibold text-foreground">{sq.nome}</span>
+                      {!inGraduatoria && (
+                        <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
+                          <Lock size={10} /> 2 tappe minime
+                        </p>
+                      )}
+                    </div>
                     <span className="text-center text-muted">{sq.tappe_giocate}</span>
+                    <span className="text-center text-muted">
+                      {(sq as { bonus_social_count?: number }).bonus_social_count ? (sq as { bonus_social_count: number }).bonus_social_count : "—"}
+                    </span>
                     <span className="text-right font-[family-name:var(--font-bebas)] text-xl text-primary">
                       {sq.punti_totali}
                     </span>
@@ -195,7 +203,7 @@ export default async function ClassificaPage() {
               <Link href="/finals" className="text-primary hover:text-gold transition-colors">
                 The Finals
               </Link>
-              . In classifica figurano solo le squadre con almeno 2 tappe disputate.
+              . In classifica figurano tutte le squadre iscritte; quelle con almeno 2 tappe disputate entrano in graduatoria ufficiale e concorrono per le top 16.
             </p>
             <p className="mt-1">
               In caso di parita&apos;: 1) piu&apos; tappe disputate, 2) miglior piazzamento medio,
@@ -203,24 +211,6 @@ export default async function ClassificaPage() {
             </p>
           </div>
         </div>
-
-        {/* Squadre con 1 tappa (non in classifica) */}
-        {squadreConUnaTappa.length > 0 && (
-          <div className="mt-8 p-6 bg-surface rounded-2xl border border-border">
-            <h2 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider text-muted mb-4">Squadre con 1 tappa</h2>
-            <p className="text-sm text-muted mb-4">Queste squadre hanno disputato una sola tappa e non figurano ancora in classifica. Partecipando ad almeno un&apos;altra tappa entreranno in graduatoria.</p>
-            <ul className="space-y-2">
-              {squadreConUnaTappa.map((sq) => (
-                <li key={sq.id}>
-                  <Link href={`/squadre/${sq.id}`} className="text-primary hover:text-gold transition-colors">
-                    {sq.nome}
-                  </Link>
-                  <span className="text-muted text-sm ml-2">— {sq.tappe_giocate} tappa, {sq.punti_totali} pt</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { User, Edit, Trophy, MapPin, LogOut, Save, Plus, Trash2, Loader2, ImageIcon } from "lucide-react";
+import { User, Edit, Trophy, MapPin, LogOut, Save, Plus, Trash2, Loader2, ImageIcon, Share2 } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import { submitTeamChangeRequest } from "@/app/actions/team-change-request";
 import { generateTeamLogo } from "@/app/actions/generate-team-logo";
 import { setTeamLogoChoice } from "@/app/actions/set-team-logo-choice";
+import { requestSocialBonus } from "@/app/actions/social-bonus";
 import type { DbSquadra, DbGiocatore } from "@/lib/types";
+import type { DbTappa } from "@/lib/types";
 import AckModal from "@/components/AckModal";
 import TeamAvatar from "@/components/TeamAvatar";
 import { AVATAR_ICON_OPTIONS, AVATAR_COLOR_OPTIONS } from "@/lib/avatar-presets";
@@ -25,6 +27,8 @@ interface DashboardClientProps {
   giocatori: DbGiocatore[];
   puntiTotali: number;
   tappeGiocate: number;
+  tappe: DbTappa[];
+  risultatiTappaIds: string[];
 }
 
 export default function DashboardClient({
@@ -32,6 +36,8 @@ export default function DashboardClient({
   giocatori: initialGiocatori,
   puntiTotali,
   tappeGiocate,
+  tappe,
+  risultatiTappaIds,
 }: DashboardClientProps) {
   const [giocatori, setGiocatori] = useState<GiocatoreForm[]>(
     initialGiocatori.map((g) => ({
@@ -48,7 +54,13 @@ export default function DashboardClient({
   const [logoProgress, setLogoProgress] = useState(0);
   const [showChooseLogo, setShowChooseLogo] = useState(false);
   const [generatedLogoUrl, setGeneratedLogoUrl] = useState<string | null>(null);
+  const [selectedLogoChoice, setSelectedLogoChoice] = useState<"generated" | "url" | "preset" | "identicon" | null>(null);
+  const [confirmingLogo, setConfirmingLogo] = useState(false);
+  const [socialBonusSubmitting, setSocialBonusSubmitting] = useState(false);
+  const [socialBonusDone, setSocialBonusDone] = useState(false);
   const router = useRouter();
+
+  const tappeConRisultato = tappe.filter((t) => risultatiTappaIds.includes(t.id));
 
   const addGiocatore = () => {
     if (giocatori.length < 8) {
@@ -111,24 +123,29 @@ export default function DashboardClient({
     }
   }
 
-  async function handleLogoChoice(choice: string, form?: HTMLFormElement) {
+  async function confirmLogoChoice() {
+    if (!selectedLogoChoice) return;
+    setConfirmingLogo(true);
+    const form = document.getElementById("dashboard-profile-form") as HTMLFormElement | undefined;
     const formData = new FormData();
-    formData.set("choice", choice);
-    if (choice === "url" && form) {
+    formData.set("choice", selectedLogoChoice);
+    if (selectedLogoChoice === "url" && form) {
       const url = (form.querySelector('[name="logo_url"]') as HTMLInputElement)?.value?.trim();
       if (url) formData.set("logo_url", url);
     }
-    if (choice === "preset" && form) {
+    if (selectedLogoChoice === "preset" && form) {
       const icon = (form.querySelector('[name="avatar_icon"]') as HTMLSelectElement)?.value;
       const color = (form.querySelector('[name="avatar_color"]') as HTMLSelectElement)?.value;
       if (icon) formData.set("avatar_icon", icon);
       if (color) formData.set("avatar_color", color);
     }
     const result = await setTeamLogoChoice(formData);
+    setConfirmingLogo(false);
     if (result?.error) setError(result.error);
     else {
       setShowChooseLogo(false);
       setGeneratedLogoUrl(null);
+      setSelectedLogoChoice(null);
       router.refresh();
     }
   }
@@ -196,7 +213,7 @@ export default function DashboardClient({
           onClose={() => setSaved(false)}
           variant="success"
           title="Richiesta inviata"
-          message="La tua richiesta di modifica è stata inviata. Riceverai un esito dopo la revisione da parte dell'organizzazione."
+          message={"La tua richiesta di modifica è stata inviata.\nRiceverai un esito dopo la revisione da parte dell'organizzazione."}
         />
 
         <form id="dashboard-profile-form" onSubmit={handleSave}>
@@ -391,6 +408,55 @@ export default function DashboardClient({
           </button>
         </form>
 
+        {/* Richiedi bonus social */}
+        {tappeConRisultato.length > 0 && (
+          <div className="p-8 bg-surface rounded-2xl border border-border mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Share2 size={18} className="text-primary" />
+              <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider">
+                Bonus social (+5 pt)
+              </h2>
+            </div>
+            <p className="text-sm text-muted mb-4">
+              Hai condiviso il template della tappa sui social? Richiedi il bonus di +5 punti per quella tappa. L&apos;organizzazione verificherà e approverà.
+            </p>
+            <form
+              action={async (formData) => {
+                setSocialBonusSubmitting(true);
+                setError("");
+                setSocialBonusDone(false);
+                const result = await requestSocialBonus(formData);
+                setSocialBonusSubmitting(false);
+                if (result?.error) setError(result.error);
+                else {
+                  setSocialBonusDone(true);
+                  router.refresh();
+                }
+              }}
+              className="flex flex-wrap items-end gap-4"
+            >
+              <div className="min-w-[200px]">
+                <label className="block text-sm text-muted mb-2">Tappa</label>
+                <select name="tappa_id" required className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground focus:outline-none focus:border-primary">
+                  <option value="">Seleziona...</option>
+                  {tappeConRisultato.map((t) => (
+                    <option key={t.id} value={t.id}>{t.nome}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-sm text-muted mb-2">Link al post (opzionale)</label>
+                <input name="link_to_post" type="url" placeholder="https://..." className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground focus:outline-none focus:border-primary" />
+              </div>
+              <button type="submit" disabled={socialBonusSubmitting} className="px-6 py-3 bg-primary text-white font-bold rounded-full hover:bg-primary-dark transition-colors disabled:opacity-50 flex items-center gap-2">
+                {socialBonusSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Share2 size={18} />}
+                Richiedi bonus
+              </button>
+            </form>
+            {socialBonusDone && <p className="text-sm text-green-400 mt-3">Richiesta inviata. Riceverai conferma dopo la revisione.</p>}
+          </div>
+        )}
+
         {/* Generating logo overlay */}
         {generatingLogo && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -410,34 +476,61 @@ export default function DashboardClient({
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
             <div className="bg-surface rounded-2xl border border-border max-w-2xl w-full my-8 p-6">
               <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider mb-4">Scegli il tuo logo</h2>
-              <p className="text-sm text-muted mb-6">Scegli come mostrare il quadrato della squadra sul sito.</p>
+              <p className="text-sm text-muted mb-6">Scegli come mostrare il quadrato della squadra sul sito, poi clicca Conferma.</p>
               <div className="grid grid-cols-2 gap-4 mb-6">
-                <button type="button" onClick={() => handleLogoChoice("generated")} className="p-4 rounded-xl border-2 border-primary bg-primary/5 hover:bg-primary/10 transition-colors text-left">
+                <button
+                  type="button"
+                  onClick={() => setSelectedLogoChoice("generated")}
+                  className={`p-4 rounded-xl border-2 text-left transition-colors ${selectedLogoChoice === "generated" ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
+                >
                   <div className="w-20 h-20 rounded-xl overflow-hidden mb-3 border border-border">
                     <img src={generatedLogoUrl || squadra.generated_logo_url || ""} alt="Generata" className="w-full h-full object-cover" />
                   </div>
                   <span className="font-medium">Usa immagine generata</span>
                 </button>
-                <button type="button" onClick={() => handleLogoChoice("url", document.getElementById("dashboard-profile-form") as HTMLFormElement)} className="p-4 rounded-xl border border-border hover:border-primary/50 transition-colors text-left">
+                <button
+                  type="button"
+                  onClick={() => setSelectedLogoChoice("url")}
+                  className={`p-4 rounded-xl border-2 text-left transition-colors ${selectedLogoChoice === "url" ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
+                >
                   <div className="w-20 h-20 rounded-xl bg-background border border-border flex items-center justify-center mb-3">
                     <ImageIcon size={32} className="text-muted" />
                   </div>
                   <span className="font-medium">Usa il mio URL</span>
                 </button>
-                <button type="button" onClick={() => handleLogoChoice("preset", document.getElementById("dashboard-profile-form") as HTMLFormElement)} className="p-4 rounded-xl border border-border hover:border-primary/50 transition-colors text-left col-span-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedLogoChoice("preset")}
+                  className={`p-4 rounded-xl border-2 text-left transition-colors col-span-2 ${selectedLogoChoice === "preset" ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
+                >
                   <div className="flex items-center gap-3">
                     <TeamAvatar squadra={{ ...squadra, logo_url: null, avatar_icon: (document.querySelector('#dashboard-profile-form [name="avatar_icon"]') as HTMLSelectElement)?.value || null, avatar_color: (document.querySelector('#dashboard-profile-form [name="avatar_color"]') as HTMLSelectElement)?.value || null }} size="md" />
                     <span className="font-medium">Usa icona e colore selezionati</span>
                   </div>
                 </button>
-                <button type="button" onClick={() => handleLogoChoice("identicon")} className="p-4 rounded-xl border border-border hover:border-primary/50 transition-colors text-left col-span-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedLogoChoice("identicon")}
+                  className={`p-4 rounded-xl border-2 text-left transition-colors col-span-2 ${selectedLogoChoice === "identicon" ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
+                >
                   <div className="flex items-center gap-3">
                     <TeamAvatar squadra={{ ...squadra, logo_url: null, avatar_icon: null, avatar_color: null }} size="md" />
                     <span className="font-medium">Usa avatar predefinito</span>
                   </div>
                 </button>
               </div>
-              <button type="button" onClick={() => { setShowChooseLogo(false); setGeneratedLogoUrl(null); router.refresh(); }} className="text-sm text-muted hover:text-foreground">Scegli più tardi</button>
+              <div className="flex items-center justify-between gap-4">
+                <button type="button" onClick={() => { setShowChooseLogo(false); setGeneratedLogoUrl(null); setSelectedLogoChoice(null); router.refresh(); }} className="text-sm text-muted hover:text-foreground">Scegli più tardi</button>
+                <button
+                  type="button"
+                  onClick={confirmLogoChoice}
+                  disabled={!selectedLogoChoice || confirmingLogo}
+                  className="px-6 py-3 rounded-full font-bold bg-primary text-white hover:bg-primary-dark disabled:opacity-50 disabled:pointer-events-none transition-colors flex items-center gap-2"
+                >
+                  {confirmingLogo ? <Loader2 size={18} className="animate-spin" /> : null}
+                  Conferma
+                </button>
+              </div>
             </div>
           </div>
         )}

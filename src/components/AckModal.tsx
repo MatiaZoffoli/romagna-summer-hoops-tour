@@ -57,7 +57,7 @@ export default function AckModal({
             <X size={20} />
           </button>
         </div>
-        <p className="text-muted mb-6">{message}</p>
+        <p className="text-muted mb-6 whitespace-pre-line">{message}</p>
         <button
           type="button"
           onClick={onClose}

@@ -58,7 +58,7 @@ export default async function SquadraDetailPage({ params }: SquadraPageProps) {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-10">
+        <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="p-6 bg-surface rounded-xl border border-border text-center">
             <Trophy size={20} className="text-primary mx-auto mb-2" />
             <p className="font-[family-name:var(--font-bebas)] text-3xl text-primary">
@@ -81,6 +81,53 @@ export default async function SquadraDetailPage({ params }: SquadraPageProps) {
             <p className="text-xs text-muted uppercase tracking-wider">Giocatori</p>
           </div>
         </div>
+
+        {/* Match stats (when available) */}
+        {(squadra as { partite_giocate?: number }).partite_giocate != null && (squadra as { partite_giocate: number }).partite_giocate > 0 && (
+          <div className="p-6 bg-surface rounded-xl border border-border mb-10">
+            <h2 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider mb-4">Statistiche</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 text-center">
+              <div>
+                <p className="font-[family-name:var(--font-bebas)] text-2xl text-foreground">{(squadra as { partite_giocate: number }).partite_giocate}</p>
+                <p className="text-xs text-muted">Partite</p>
+              </div>
+              <div>
+                <p className="font-[family-name:var(--font-bebas)] text-2xl text-green-400">{(squadra as { partite_vinte?: number }).partite_vinte ?? "—"}</p>
+                <p className="text-xs text-muted">Vinte</p>
+              </div>
+              <div>
+                <p className="font-[family-name:var(--font-bebas)] text-2xl text-red-400">
+                  {((squadra as { partite_giocate: number }).partite_giocate - ((squadra as { partite_vinte?: number }).partite_vinte ?? 0))}
+                </p>
+                <p className="text-xs text-muted">Perse</p>
+              </div>
+              <div>
+                <p className="font-[family-name:var(--font-bebas)] text-2xl text-primary">
+                  {(squadra as { partite_giocate: number }).partite_giocate > 0
+                    ? `${Math.round((((squadra as { partite_vinte?: number }).partite_vinte ?? 0) / (squadra as { partite_giocate: number }).partite_giocate) * 100)}%`
+                    : "—"}
+                </p>
+                <p className="text-xs text-muted">Win%</p>
+              </div>
+              <div>
+                <p className="font-[family-name:var(--font-bebas)] text-2xl text-foreground">
+                  {(squadra as { punti_fatti?: number }).punti_fatti != null && (squadra as { partite_giocate: number }).partite_giocate > 0
+                    ? ((squadra as { punti_fatti: number }).punti_fatti / (squadra as { partite_giocate: number }).partite_giocate).toFixed(1)
+                    : "—"}
+                </p>
+                <p className="text-xs text-muted">Media PF</p>
+              </div>
+              <div>
+                <p className="font-[family-name:var(--font-bebas)] text-2xl text-foreground">
+                  {(squadra as { punti_subiti?: number }).punti_subiti != null && (squadra as { partite_giocate: number }).partite_giocate > 0
+                    ? ((squadra as { punti_subiti: number }).punti_subiti / (squadra as { partite_giocate: number }).partite_giocate).toFixed(1)
+                    : "—"}
+                </p>
+                <p className="text-xs text-muted">Media PS</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Roster */}
         <div className="mb-10">

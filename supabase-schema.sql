@@ -57,6 +57,8 @@ create table public.tappe (
   instagram text,
   descrizione text,
   stato text default 'confermata' check (stato in ('pending', 'confermata', 'in_corso', 'in_attesa_risultati', 'conclusa')),
+  lat double precision,
+  lng double precision,
   created_at timestamp with time zone default now()
 );
 
@@ -69,8 +71,50 @@ create table public.risultati (
   squadra_id uuid references public.squadre(id) on delete cascade not null,
   posizione integer not null,
   punti integer not null default 0,
+  partite_giocate integer,
+  partite_vinte integer,
+  punti_fatti integer,
+  punti_subiti integer,
   created_at timestamp with time zone default now(),
   unique(tappa_id, squadra_id)
+);
+
+-- ============================================
+-- SOCIAL BONUS (+5 points per tappa when team shares)
+-- ============================================
+create table public.social_bonus (
+  id uuid default uuid_generate_v4() primary key,
+  squadra_id uuid references public.squadre(id) on delete cascade not null,
+  tappa_id uuid references public.tappe(id) on delete cascade not null,
+  granted_at timestamp with time zone default now(),
+  unique(squadra_id, tappa_id)
+);
+
+create table public.social_bonus_requests (
+  id uuid default uuid_generate_v4() primary key,
+  squadra_id uuid references public.squadre(id) on delete cascade not null,
+  tappa_id uuid references public.tappe(id) on delete cascade not null,
+  link_to_post text,
+  stato text default 'pending' check (stato in ('pending', 'approved', 'rejected')),
+  created_at timestamp with time zone default now(),
+  reviewed_at timestamp with time zone,
+  unique(squadra_id, tappa_id)
+);
+
+-- ============================================
+-- MVPs (Most Valuable Player per tappa)
+-- ============================================
+create table public.mvps (
+  id uuid default uuid_generate_v4() primary key,
+  tappa_id uuid references public.tappe(id) on delete cascade not null,
+  nome text not null,
+  cognome text not null,
+  photo_url text,
+  bio text,
+  carriera text,
+  stats jsonb default '{}',
+  ordine integer default 0,
+  created_at timestamp with time zone default now()
 );
 
 -- ============================================

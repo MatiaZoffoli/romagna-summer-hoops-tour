@@ -23,18 +23,28 @@ export async function addTappaResult(formData: FormData) {
   const squadraId = formData.get("squadraId") as string;
   const posizione = parseInt(formData.get("posizione") as string);
   const punti = parseInt(formData.get("punti") as string);
+  const partiteGiocate = formData.get("partite_giocate") ? parseInt(formData.get("partite_giocate") as string) : null;
+  const partiteVinte = formData.get("partite_vinte") ? parseInt(formData.get("partite_vinte") as string) : null;
+  const puntiFatti = formData.get("punti_fatti") ? parseInt(formData.get("punti_fatti") as string) : null;
+  const puntiSubiti = formData.get("punti_subiti") ? parseInt(formData.get("punti_subiti") as string) : null;
 
   if (!tappaId || !squadraId || isNaN(posizione) || isNaN(punti)) {
     return { error: "Tutti i campi sono obbligatori." };
   }
 
+  const payload: Record<string, unknown> = {
+    tappa_id: tappaId,
+    squadra_id: squadraId,
+    posizione,
+    punti,
+  };
+  if (partiteGiocate != null && !Number.isNaN(partiteGiocate)) payload.partite_giocate = partiteGiocate;
+  if (partiteVinte != null && !Number.isNaN(partiteVinte)) payload.partite_vinte = partiteVinte;
+  if (puntiFatti != null && !Number.isNaN(puntiFatti)) payload.punti_fatti = puntiFatti;
+  if (puntiSubiti != null && !Number.isNaN(puntiSubiti)) payload.punti_subiti = puntiSubiti;
+
   const { error } = await supabase.from("risultati").upsert(
-    {
-      tappa_id: tappaId,
-      squadra_id: squadraId,
-      posizione,
-      punti,
-    },
+    payload,
     { onConflict: "tappa_id,squadra_id" }
   );
 
@@ -137,6 +147,10 @@ export async function addTappa(formData: FormData) {
   const instagram = formData.get("instagram") as string;
   const descrizione = formData.get("descrizione") as string;
   const stato = formData.get("stato") as string;
+  const latStr = (formData.get("lat") as string)?.trim();
+  const lngStr = (formData.get("lng") as string)?.trim();
+  const lat = latStr ? parseFloat(latStr) : null;
+  const lng = lngStr ? parseFloat(lngStr) : null;
 
   if (!nome || !data || !luogo) {
     return { error: "Nome, data e luogo sono obbligatori." };
@@ -158,6 +172,8 @@ export async function addTappa(formData: FormData) {
     instagram: instagram || null,
     descrizione: descrizione || null,
     stato: stato || "confermata",
+    lat: lat != null && !Number.isNaN(lat) ? lat : null,
+    lng: lng != null && !Number.isNaN(lng) ? lng : null,
   });
 
   if (error) {
@@ -191,7 +207,9 @@ export async function getAdminData(password: string) {
 
   const supabase = createServiceRoleClient();
 
-  const [tappeRes, squadreRes, risultatiRes, newsRes, applicationsRes, teamApplicationsRes, teamChangeRequestsRes] = await Promise.all([
+  const mvpsRes = await supabase.from("mvps").select("*, tappe(nome, slug)").order("ordine").order("created_at", { ascending: false });
+
+  const [tappeRes, squadreRes, risultatiRes, newsRes, applicationsRes, teamApplicationsRes, teamChangeRequestsRes, socialBonusRequestsRes] = await Promise.all([
     supabase.from("tappe").select("*").order("created_at"),
     supabase.from("squadre").select("*, giocatori(*)").order("nome"),
     supabase.from("risultati").select("*, tappe(nome), squadre(nome)").order("created_at", { ascending: false }),
@@ -199,6 +217,7 @@ export async function getAdminData(password: string) {
     supabase.from("tappa_applications").select("*").order("created_at", { ascending: false }),
     Promise.resolve(supabase.from("team_applications").select("*").order("created_at", { ascending: false })).catch(() => ({ data: [] })),
     Promise.resolve(supabase.from("team_change_requests").select("*").order("created_at", { ascending: false })).catch(() => ({ data: [] })),
+    supabase.from("social_bonus_requests").select("*, squadre(nome), tappe(nome, slug)").eq("stato", "pending").order("created_at", { ascending: false }),
   ]);
 
   return {
@@ -209,6 +228,8 @@ export async function getAdminData(password: string) {
     applications: applicationsRes.data || [],
     teamApplications: (teamApplicationsRes as { data?: unknown[] }).data || [],
     teamChangeRequests: (teamChangeRequestsRes as { data?: unknown[] }).data || [],
+    socialBonusRequests: (socialBonusRequestsRes as { data?: unknown[]; error?: unknown }).error ? [] : ((socialBonusRequestsRes as { data: unknown[] }).data || []),
+    mvps: mvpsRes.error ? [] : (mvpsRes.data || []),
   };
 }
 
@@ -447,7 +468,7 @@ export async function approveTeamApplication(formData: FormData) {
 
   if (authError) {
     if (authError.message.includes("already been registered") || authError.message.includes("already exists")) {
-      return { error: "Questa email è già registrata. Usa un'altra email o rifiuta la richiesta." };
+      return { error: "Questa email è già registrata.\nUsa un'altra email o rifiuta la richiesta." };
     }
     return { error: "Errore creazione account: " + authError.message };
   }
@@ -880,5 +901,167 @@ export async function rejectTeamChangeRequest(formData: FormData) {
 
   revalidatePath("/admin");
   revalidatePath("/dashboard");
+  return { success: true };
+}
+
+// ============================================
+// SOCIAL BONUS REQUESTS
+// ============================================
+
+export async function approveSocialBonusRequest(formData: FormData) {
+  const password = formData.get("adminPassword") as string;
+  if (!verifyAdmin(password)) return { error: "Password admin non valida." };
+
+  const requestId = formData.get("requestId") as string;
+  if (!requestId) return { error: "Richiesta non valida." };
+
+  const supabase = createServiceRoleClient();
+
+  const { data: req, error: fetchErr } = await supabase
+    .from("social_bonus_requests")
+    .select("squadra_id, tappa_id")
+    .eq("id", requestId)
+    .eq("stato", "pending")
+    .single();
+
+  if (fetchErr || !req) return { error: "Richiesta non trovata o già processata." };
+
+  const { error: insertErr } = await supabase.from("social_bonus").insert({
+    squadra_id: req.squadra_id,
+    tappa_id: req.tappa_id,
+  });
+
+  if (insertErr) {
+    if (insertErr.code === "23505") {
+      await supabase.from("social_bonus_requests").update({ stato: "approved", reviewed_at: new Date().toISOString() }).eq("id", requestId);
+      revalidatePath("/admin");
+      revalidatePath("/classifica");
+      revalidatePath("/");
+      return { success: true };
+    }
+    return { error: insertErr.message };
+  }
+
+  await supabase.from("social_bonus_requests").update({ stato: "approved", reviewed_at: new Date().toISOString() }).eq("id", requestId);
+
+  revalidatePath("/admin");
+  revalidatePath("/classifica");
+  revalidatePath("/");
+  return { success: true };
+}
+
+export async function rejectSocialBonusRequest(formData: FormData) {
+  const password = formData.get("adminPassword") as string;
+  if (!verifyAdmin(password)) return { error: "Password admin non valida." };
+
+  const requestId = formData.get("requestId") as string;
+  if (!requestId) return { error: "Richiesta non valida." };
+
+  const supabase = createServiceRoleClient();
+  const { error } = await supabase
+    .from("social_bonus_requests")
+    .update({ stato: "rejected", reviewed_at: new Date().toISOString() })
+    .eq("id", requestId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin");
+  revalidatePath("/classifica");
+  return { success: true };
+}
+
+// ============================================
+// MVPs
+// ============================================
+
+export async function createMvp(formData: FormData) {
+  const password = formData.get("adminPassword") as string;
+  if (!verifyAdmin(password)) return { error: "Password admin non valida." };
+
+  const supabase = createServiceRoleClient();
+  const tappaId = (formData.get("tappa_id") as string)?.trim();
+  const nome = (formData.get("nome") as string)?.trim();
+  const cognome = (formData.get("cognome") as string)?.trim();
+  const photoUrl = (formData.get("photo_url") as string)?.trim() || null;
+  const bio = (formData.get("bio") as string)?.trim() || null;
+  const carriera = (formData.get("carriera") as string)?.trim() || null;
+  const ordine = parseInt((formData.get("ordine") as string) || "0", 10) || 0;
+  let stats: Record<string, unknown> = {};
+  try {
+    const statsStr = (formData.get("stats") as string)?.trim();
+    if (statsStr) stats = JSON.parse(statsStr) as Record<string, unknown>;
+  } catch {
+    // ignore
+  }
+
+  if (!tappaId || !nome || !cognome) return { error: "Tappa, nome e cognome obbligatori." };
+
+  const { error } = await supabase.from("mvps").insert({
+    tappa_id: tappaId,
+    nome,
+    cognome,
+    photo_url: photoUrl,
+    bio,
+    carriera,
+    stats,
+    ordine,
+  });
+
+  if (error) return { error: error.message };
+  revalidatePath("/admin");
+  revalidatePath("/mvp");
+  return { success: true };
+}
+
+export async function updateMvp(formData: FormData) {
+  const password = formData.get("adminPassword") as string;
+  if (!verifyAdmin(password)) return { error: "Password admin non valida." };
+
+  const id = (formData.get("id") as string)?.trim();
+  if (!id) return { error: "ID MVP mancante." };
+
+  const supabase = createServiceRoleClient();
+  const nome = (formData.get("nome") as string)?.trim();
+  const cognome = (formData.get("cognome") as string)?.trim();
+  const photoUrl = (formData.get("photo_url") as string)?.trim() || null;
+  const bio = (formData.get("bio") as string)?.trim() || null;
+  const carriera = (formData.get("carriera") as string)?.trim() || null;
+  const ordine = parseInt((formData.get("ordine") as string) || "0", 10) || 0;
+  let stats: Record<string, unknown> = {};
+  try {
+    const statsStr = (formData.get("stats") as string)?.trim();
+    if (statsStr) stats = JSON.parse(statsStr) as Record<string, unknown>;
+  } catch {
+    // ignore
+  }
+
+  const { error } = await supabase.from("mvps").update({
+    nome: nome ?? undefined,
+    cognome: cognome ?? undefined,
+    photo_url: photoUrl,
+    bio,
+    carriera,
+    stats,
+    ordine,
+  }).eq("id", id);
+
+  if (error) return { error: error.message };
+  revalidatePath("/admin");
+  revalidatePath("/mvp");
+  return { success: true };
+}
+
+export async function deleteMvp(formData: FormData) {
+  const password = formData.get("adminPassword") as string;
+  if (!verifyAdmin(password)) return { error: "Password admin non valida." };
+
+  const id = (formData.get("id") as string)?.trim();
+  if (!id) return { error: "ID MVP mancante." };
+
+  const supabase = createServiceRoleClient();
+  const { error } = await supabase.from("mvps").delete().eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/admin");
+  revalidatePath("/mvp");
   return { success: true };
 }

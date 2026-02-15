@@ -55,6 +55,8 @@ export interface DbTappa {
   instagram: string | null;
   descrizione: string | null;
   stato: "pending" | "confermata" | "in_corso" | "in_attesa_risultati" | "conclusa";
+  lat: number | null;
+  lng: number | null;
   created_at: string;
 }
 
@@ -64,6 +66,10 @@ export interface DbRisultato {
   squadra_id: string;
   posizione: number;
   punti: number;
+  partite_giocate?: number | null;
+  partite_vinte?: number | null;
+  punti_fatti?: number | null;
+  punti_subiti?: number | null;
   created_at: string;
 }
 
@@ -78,6 +84,19 @@ export interface DbNews {
   created_at: string;
 }
 
+export interface DbMvp {
+  id: string;
+  tappa_id: string;
+  nome: string;
+  cognome: string;
+  photo_url: string | null;
+  bio: string | null;
+  carriera: string | null;
+  stats: Record<string, unknown>;
+  ordine: number;
+  created_at: string;
+}
+
 // ============================================
 // Frontend types (enriched for display)
 // ============================================
@@ -87,6 +106,13 @@ export interface SquadraConPunti extends DbSquadra {
   punti_totali: number;
   tappe_giocate: number;
   risultati: (DbRisultato & { tappa_slug: string })[];
+  /** Number of tappe for which the team received the +5 social bonus */
+  bonus_social_count?: number;
+  /** Aggregated match stats (when available) */
+  partite_giocate?: number;
+  partite_vinte?: number;
+  punti_fatti?: number;
+  punti_subiti?: number;
 }
 
 export interface TappaConRisultati extends DbTappa {

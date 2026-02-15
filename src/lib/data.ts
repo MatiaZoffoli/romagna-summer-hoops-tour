@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { DbTappa, DbSquadra, DbGiocatore, DbRisultato, DbNews, SquadraConPunti, TappaConRisultati } from "@/lib/types";
+import type { DbTappa, DbSquadra, DbGiocatore, DbRisultato, DbNews, DbMvp, SquadraConPunti, TappaConRisultati } from "@/lib/types";
 import { tappe as placeholderTappe, squadre as placeholderSquadre, news as placeholderNews, sistemaPunteggio as placeholderPunteggio, crew as placeholderCrew } from "@/data/placeholder";
 
 // Helper to check if Supabase is configured
@@ -22,6 +22,8 @@ function normalizeStato(raw: unknown): Stato {
 }
 
 function normalizeTappa(row: Record<string, unknown>): DbTappa {
+  const lat = row?.lat != null && typeof row.lat === "number" ? row.lat : row?.lat != null && typeof row.lat === "string" ? parseFloat(row.lat) : null;
+  const lng = row?.lng != null && typeof row.lng === "number" ? row.lng : row?.lng != null && typeof row.lng === "string" ? parseFloat(row.lng) : null;
   return {
     id: String(row?.id ?? ""),
     slug: String(row?.slug ?? row?.id ?? ""),
@@ -37,8 +39,27 @@ function normalizeTappa(row: Record<string, unknown>): DbTappa {
     instagram: row?.instagram != null ? String(row.instagram) : null,
     descrizione: row?.descrizione != null ? String(row.descrizione) : null,
     stato: normalizeStato(row?.stato),
+    lat: lat != null && !Number.isNaN(lat) ? lat : null,
+    lng: lng != null && !Number.isNaN(lng) ? lng : null,
     created_at: row?.created_at != null ? String(row.created_at) : new Date().toISOString(),
   };
+}
+
+const IT_MONTHS: Record<string, number> = {
+  gennaio: 1, febbraio: 2, marzo: 3, aprile: 4, maggio: 5, giugno: 6,
+  luglio: 7, agosto: 8, settembre: 9, ottobre: 10, novembre: 11, dicembre: 12,
+};
+
+/** Parse Italian date string (e.g. "Sabato 11 Luglio 2026" or "11 Luglio 2026") to Date at noon UTC. */
+export function parseItalianDate(dataStr: string): Date | null {
+  const s = dataStr.trim().toLowerCase();
+  const match = s.match(/(\d{1,2})\s+(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)\s+(\d{4})/);
+  if (!match) return null;
+  const [, day, monthName, year] = match;
+  const month = IT_MONTHS[monthName];
+  if (!month) return null;
+  const d = new Date(Date.UTC(Number(year), month - 1, Number(day), 12, 0, 0));
+  return isNaN(d.getTime()) ? null : d;
 }
 
 export async function getTappe(): Promise<DbTappa[]> {
@@ -58,6 +79,8 @@ export async function getTappe(): Promise<DbTappa[]> {
       instagram: t.instagram,
       descrizione: t.descrizione,
       stato: t.stato,
+      lat: null,
+      lng: null,
       created_at: new Date().toISOString(),
     }));
   }
@@ -88,9 +111,29 @@ export async function getTappe(): Promise<DbTappa[]> {
       instagram: t.instagram,
       descrizione: t.descrizione,
       stato: t.stato,
+      lat: null,
+      lng: null,
       created_at: new Date().toISOString(),
     }));
   }
+}
+
+/** Next tappa whose date is within the next 7 days (for promo popup). */
+export async function getProssimaTappaPromo(): Promise<DbTappa | null> {
+  const tappe = await getTappe();
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const in7 = new Date(now);
+  in7.setDate(in7.getDate() + 7);
+
+  for (const t of tappe) {
+    if (t.stato !== "confermata" && t.stato !== "in_corso") continue;
+    const d = parseItalianDate(t.data);
+    if (!d) continue;
+    d.setHours(0, 0, 0, 0);
+    if (d >= now && d <= in7) return t;
+  }
+  return null;
 }
 
 export async function getTappaBySlug(slug: string): Promise<TappaConRisultati | null> {
@@ -112,6 +155,8 @@ export async function getTappaBySlug(slug: string): Promise<TappaConRisultati | 
       instagram: t.instagram,
       descrizione: t.descrizione,
       stato: t.stato,
+      lat: null,
+      lng: null,
       created_at: new Date().toISOString(),
       risultati: [],
     };
@@ -215,16 +260,18 @@ export async function getSquadreConPunti(): Promise<SquadraConPunti[]> {
         punti_totali: puntiBase + bonus,
         tappe_giocate: s.tappeGiocate,
         risultati: [],
+        bonus_social_count: 0,
       };
     });
   }
 
   const supabase = await createClient();
 
-  const [squadreRes, risultatiRes, tappeRes] = await Promise.all([
+  const [squadreRes, risultatiRes, tappeRes, socialBonusRes] = await Promise.all([
     supabase.from("squadre").select("*, giocatori(*)").order("nome", { ascending: true }),
     supabase.from("risultati").select("*, tappe(slug)"),
     supabase.from("tappe").select("id").order("created_at", { ascending: true }),
+    supabase.from("social_bonus").select("squadra_id"),
   ]);
 
   const squadre = squadreRes.data;
@@ -233,6 +280,7 @@ export async function getSquadreConPunti(): Promise<SquadraConPunti[]> {
   const risultati = risultatiRes.data || [];
   const tappeOrdered = tappeRes.data || [];
   const orderedTappaIds = tappeOrdered.map((t: { id: string }) => t.id);
+  const socialBonuses = socialBonusRes.error ? [] : (socialBonusRes.data || []);
 
   return squadre.map((s: DbSquadra & { giocatori: DbGiocatore[] }) => {
     const teamResults = risultati.filter((r: DbRisultato) => r.squadra_id === s.id);
@@ -240,15 +288,27 @@ export async function getSquadreConPunti(): Promise<SquadraConPunti[]> {
     const streak = longestConsecutiveStreak(orderedTappaIds, teamTappaIds);
     const puntiBase = teamResults.reduce((sum: number, r: DbRisultato) => sum + r.punti, 0);
     const bonus = streak * BONUS_PER_TAPPA_SERIE;
+    const bonusSocialCount = socialBonuses.filter((b: { squadra_id: string }) => b.squadra_id === s.id).length;
+    const puntiSocial = bonusSocialCount * 5;
+
+    const partiteGiocate = teamResults.reduce((sum: number, r: DbRisultato & { partite_giocate?: number | null }) => sum + (r.partite_giocate ?? 0), 0);
+    const partiteVinte = teamResults.reduce((sum: number, r: DbRisultato & { partite_vinte?: number | null }) => sum + (r.partite_vinte ?? 0), 0);
+    const puntiFatti = teamResults.reduce((sum: number, r: DbRisultato & { punti_fatti?: number | null }) => sum + (r.punti_fatti ?? 0), 0);
+    const puntiSubiti = teamResults.reduce((sum: number, r: DbRisultato & { punti_subiti?: number | null }) => sum + (r.punti_subiti ?? 0), 0);
 
     return {
       ...s,
-      punti_totali: puntiBase + bonus,
+      punti_totali: puntiBase + bonus + puntiSocial,
       tappe_giocate: teamResults.length,
       risultati: teamResults.map((r: DbRisultato & { tappe: { slug: string } }) => ({
         ...r,
         tappa_slug: r.tappe?.slug || "",
       })),
+      bonus_social_count: bonusSocialCount,
+      partite_giocate: partiteGiocate || undefined,
+      partite_vinte: partiteVinte || undefined,
+      punti_fatti: puntiFatti || undefined,
+      punti_subiti: puntiSubiti || undefined,
     };
   });
 }
@@ -313,17 +373,42 @@ export async function getClassifica() {
     return lastPos(a) - lastPos(b);
   });
 
-  // Main table: only teams with at least 2 tappe (qualification rule)
-  const squadreQualificate = classificaOrdinata.filter((s) => s.tappe_giocate >= 2);
-  const squadreConUnaTappa = classificaOrdinata.filter((s) => s.tappe_giocate === 1);
-  const squadreSenzaRisultati = classificaOrdinata.filter((s) => s.tappe_giocate === 0);
-
+  // Return full ordered list; UI greys out teams with <2 tappe
   return {
-    squadre: squadreQualificate,
-    squadreConUnaTappa,
-    squadreSenzaRisultati,
+    squadre: classificaOrdinata,
     tappe,
   };
+}
+
+// ============================================
+// MVPs
+// ============================================
+
+export interface MvpConTappa extends DbMvp {
+  tappe: { nome: string; slug: string; data: string } | null;
+}
+
+export async function getMvps(): Promise<MvpConTappa[]> {
+  if (!isSupabaseConfigured()) return [];
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("mvps")
+      .select("*, tappe(nome, slug, data)")
+      .order("ordine", { ascending: true })
+      .order("created_at", { ascending: false });
+
+    if (error) return [];
+    const rows = (data ?? []) as (DbMvp & { tappe: { nome: string; slug: string; data: string } | null })[];
+    return rows.map((row) => ({
+      ...row,
+      stats: (row.stats as Record<string, unknown>) ?? {},
+      tappe: row.tappe ?? null,
+    }));
+  } catch {
+    return [];
+  }
 }
 
 // Re-export static data that doesn't need Supabase

@@ -1,22 +1,20 @@
 import Link from "next/link";
-import { Calendar, Trophy, MapPin, Users, ArrowRight, Star, Flame } from "lucide-react";
-import { getTappe, getSquadreConPunti, getNews } from "@/lib/data";
+import { Calendar, Trophy, MapPin, Users, ArrowRight, Star, Flame, Lock } from "lucide-react";
+import { getTappe, getClassifica, getNews } from "@/lib/data";
 
 export const revalidate = 60; // Revalidate every 60 seconds
 
 export default async function Home() {
-  const [tappe, squadre, newsItems] = await Promise.all([
+  const [tappe, classificaData, newsItems] = await Promise.all([
     getTappe(),
-    getSquadreConPunti(),
+    getClassifica(),
     getNews(),
   ]);
 
   const prossimaTappa = tappe.find(
     (t) => t.stato === "confermata" || t.stato === "in_corso"
   );
-  const topSquadre = [...squadre]
-    .sort((a, b) => b.punti_totali - a.punti_totali)
-    .slice(0, 5);
+  const topSquadre = classificaData.squadre.slice(0, 5);
 
   return (
     <div className="pt-16">
@@ -99,7 +97,7 @@ export default async function Home() {
             { label: "Tappe", value: `${tappe.length}+`, icon: MapPin },
             { label: "Province", value: "3", icon: MapPin },
             { label: "Mesi di Gare", value: "Maggio - Settembre", icon: Calendar },
-            { label: "Squadre Iscritte", value: `${squadre.length}+`, icon: Users },
+            { label: "Squadre Iscritte", value: `${classificaData.squadre.length}+`, icon: Users },
           ].map((stat) => (
             <div key={stat.label} className="flex flex-col items-center gap-1">
               <stat.icon size={20} className="text-primary mb-1" />
@@ -244,33 +242,42 @@ export default async function Home() {
               <span className="text-right">Punti</span>
             </div>
             {topSquadre.length > 0 ? (
-              topSquadre.map((sq, i) => (
-                <div
-                  key={sq.id}
-                  className="grid grid-cols-[60px_1fr_100px] sm:grid-cols-[60px_1fr_120px_120px] items-center px-6 py-4 border-b border-border/50 hover:bg-surface-light transition-colors"
-                >
-                  <span
-                    className={`font-[family-name:var(--font-bebas)] text-2xl ${
-                      i === 0
-                        ? "text-gold"
-                        : i === 1
-                        ? "text-gray-400"
-                        : i === 2
-                        ? "text-orange-600"
-                        : "text-muted"
-                    }`}
+              topSquadre.map((sq, i) => {
+                const inGraduatoria = sq.tappe_giocate >= 2;
+                const rowOpacity = inGraduatoria ? "" : "opacity-60";
+                const rankColor =
+                  inGraduatoria && i === 0
+                    ? "text-gold"
+                    : inGraduatoria && i === 1
+                    ? "text-gray-400"
+                    : inGraduatoria && i === 2
+                    ? "text-orange-600"
+                    : "text-muted";
+                return (
+                  <div
+                    key={sq.id}
+                    className={`grid grid-cols-[60px_1fr_100px] sm:grid-cols-[60px_1fr_120px_120px] items-center px-6 py-4 border-b border-border/50 hover:bg-surface-light transition-colors ${rowOpacity}`}
                   >
-                    {i + 1}
-                  </span>
-                  <span className="font-semibold text-foreground">{sq.nome}</span>
-                  <span className="hidden sm:block text-right text-muted">
-                    {sq.tappe_giocate}
-                  </span>
-                  <span className="text-right font-[family-name:var(--font-bebas)] text-xl text-primary">
-                    {sq.punti_totali}
-                  </span>
-                </div>
-              ))
+                    <span className={`font-[family-name:var(--font-bebas)] text-2xl ${rankColor}`}>
+                      {i + 1}
+                    </span>
+                    <div>
+                      <span className="font-semibold text-foreground">{sq.nome}</span>
+                      {!inGraduatoria && (
+                        <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
+                          <Lock size={10} /> Non in classifica
+                        </p>
+                      )}
+                    </div>
+                    <span className="hidden sm:block text-right text-muted">
+                      {sq.tappe_giocate}
+                    </span>
+                    <span className="text-right font-[family-name:var(--font-bebas)] text-xl text-primary">
+                      {sq.punti_totali}
+                    </span>
+                  </div>
+                );
+              })
             ) : (
               <div className="px-6 py-12 text-center text-muted">
                 La classifica verrà aggiornata dopo la prima tappa.
