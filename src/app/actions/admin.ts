@@ -2,6 +2,7 @@
 
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { uploadTappaLogoFile } from "@/app/actions/tappa-logo";
 import { sendEmail, notifyOrganizerApproved, notifyOrganizerRejected, sendWelcomeToTeam, notifyTeamRejected, notifyTeamChangeRequestApproved, notifyTeamChangeRequestRejected } from "@/lib/email";
 import { generateNewsFromEvent } from "@/lib/news-llm";
 
@@ -151,6 +152,15 @@ export async function addTappa(formData: FormData) {
   const lngStr = (formData.get("lng") as string)?.trim();
   const lat = latStr ? parseFloat(latStr) : null;
   const lng = lngStr ? parseFloat(lngStr) : null;
+  let logoUrl = (formData.get("logoUrl") as string)?.trim() || null;
+  const logoFile = formData.get("logo") as File | null;
+  if (logoFile && logoFile.size > 0) {
+    const fd = new FormData();
+    fd.append("logo", logoFile);
+    const up = await uploadTappaLogoFile(fd);
+    if (up.error) return { error: up.error };
+    if (up.url) logoUrl = up.url;
+  }
 
   if (!nome || !data || !luogo) {
     return { error: "Nome, data e luogo sono obbligatori." };
@@ -174,6 +184,7 @@ export async function addTappa(formData: FormData) {
     stato: stato || "confermata",
     lat: lat != null && !Number.isNaN(lat) ? lat : null,
     lng: lng != null && !Number.isNaN(lng) ? lng : null,
+    logo_url: logoUrl,
   });
 
   if (error) {
@@ -181,7 +192,37 @@ export async function addTappa(formData: FormData) {
   }
 
   revalidatePath("/tappe");
+  revalidatePath("/tappe/mappa");
   revalidatePath("/");
+  return { success: true };
+}
+
+/** Update logo for an existing tappa (URL or file upload). */
+export async function updateTappaLogo(formData: FormData) {
+  const password = formData.get("adminPassword") as string;
+  if (!verifyAdmin(password)) {
+    return { error: "Password admin non valida." };
+  }
+  const tappaId = formData.get("tappaId") as string;
+  if (!tappaId) return { error: "Tappa non specificata." };
+
+  let logoUrl = (formData.get("logoUrl") as string)?.trim() || null;
+  const logoFile = formData.get("logo") as File | null;
+  if (logoFile && logoFile.size > 0) {
+    const fd = new FormData();
+    fd.append("logo", logoFile);
+    const up = await uploadTappaLogoFile(fd);
+    if (up.error) return { error: up.error };
+    if (up.url) logoUrl = up.url;
+  }
+
+  const supabase = createServiceRoleClient();
+  const { error } = await supabase.from("tappe").update({ logo_url: logoUrl }).eq("id", tappaId);
+  if (error) return { error: "Errore aggiornamento: " + error.message };
+
+  revalidatePath("/tappe");
+  revalidatePath("/tappe/mappa");
+  revalidatePath("/admin");
   return { success: true };
 }
 
@@ -274,6 +315,8 @@ export async function approveTappaApplication(formData: FormData) {
   // Create slug from nome
   const slug = nome.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
+  const logoUrl = (application as { logo_url?: string | null }).logo_url || null;
+
   // Create the tappa
   const { error: tappaError } = await supabase.from("tappe").insert({
     slug,
@@ -289,6 +332,7 @@ export async function approveTappaApplication(formData: FormData) {
     instagram,
     descrizione,
     stato,
+    logo_url: logoUrl,
   });
 
   if (tappaError) {
@@ -459,7 +503,8 @@ export async function approveTeamApplication(formData: FormData) {
 
   const linkToSquadraId = (formData.get("link_to_squadra_id") as string)?.trim() || null;
 
-  // 1. Create auth user (service role has auth.admin)
+  // 1. Create auth user (or reuse existing if email was used before, e.g. previous squadra deleted)
+  let authUser: { id: string };
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email,
     password: pwd,
@@ -468,12 +513,27 @@ export async function approveTeamApplication(formData: FormData) {
 
   if (authError) {
     if (authError.message.includes("already been registered") || authError.message.includes("already exists")) {
-      return { error: "Questa email è già registrata.\nUsa un'altra email o rifiuta la richiesta." };
+      // Email exists in Auth (e.g. from a deleted squadra). Reuse that user and set the new password.
+      const { data: listData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const existing = listData?.users?.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+      if (existing) {
+        const { error: updatePwd } = await supabase.auth.admin.updateUserById(existing.id, {
+          password: pwd,
+          email_confirm: true,
+        });
+        if (updatePwd) {
+          return { error: "Email già usata in passato. Impossibile aggiornare la password: " + updatePwd.message };
+        }
+        authUser = { id: existing.id };
+      } else {
+        return { error: "Questa email è già registrata.\nUsa un'altra email o rifiuta la richiesta." };
+      }
+    } else {
+      return { error: "Errore creazione account: " + authError.message };
     }
-    return { error: "Errore creazione account: " + authError.message };
-  }
-
-  if (!authData.user) {
+  } else if (authData?.user) {
+    authUser = { id: authData.user.id };
+  } else {
     return { error: "Errore nella creazione dell'account." };
   }
 
@@ -497,7 +557,7 @@ export async function approveTeamApplication(formData: FormData) {
     const { error: updateError } = await supabase
       .from("squadre")
       .update({
-        auth_user_id: authData.user.id,
+        auth_user_id: authUser.id,
         email: email,
         nome: nomeSquadra,
         motto: motto ?? null,
@@ -528,7 +588,7 @@ export async function approveTeamApplication(formData: FormData) {
     const { data: newSquadra, error: squadraError } = await supabase
       .from("squadre")
       .insert({
-        auth_user_id: authData.user.id,
+        auth_user_id: authUser.id,
         nome: nomeSquadra,
         motto,
         instagram,

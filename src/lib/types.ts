@@ -57,6 +57,7 @@ export interface DbTappa {
   stato: "pending" | "confermata" | "in_corso" | "in_attesa_risultati" | "conclusa";
   lat: number | null;
   lng: number | null;
+  logo_url: string | null;
   created_at: string;
 }
 

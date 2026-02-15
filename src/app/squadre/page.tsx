@@ -10,7 +10,7 @@ export default async function SquadrePage() {
 
   return (
     <div className="pt-24 pb-20">
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="max-w-5xl mx-auto px-4">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-12">
           <div className="max-w-3xl">

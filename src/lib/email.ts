@@ -211,6 +211,10 @@ const EMAIL_STYLES = {
   btnPadding: "14px 28px",
 };
 
+function emailLogoHtml(): string {
+  return `<img src="${getSiteUrl()}/logo.png" alt="Romagna Summer Hoops Tour" style="max-width: 200px; height: auto; margin: 0 auto 12px; display: block;" />`;
+}
+
 /** Notify admin when a new team application is submitted (approval workflow). */
 export async function notifyAdminNewTeamApplication(team: {
   nome_squadra: string;
@@ -223,6 +227,7 @@ export async function notifyAdminNewTeamApplication(team: {
   const html = `
     <div style="font-family: ${EMAIL_STYLES.font}; max-width: 600px; margin: 0 auto; background: ${EMAIL_STYLES.darkerBg}; border-radius: ${EMAIL_STYLES.radius}; overflow: hidden;">
       <div style="background: ${EMAIL_STYLES.darkBg}; padding: 24px 28px; border-bottom: 3px solid ${EMAIL_STYLES.primary};">
+        ${emailLogoHtml()}
         <h1 style="margin: 0; color: ${EMAIL_STYLES.primary}; font-size: 24px; letter-spacing: 0.05em;">ROMAGNA SUMMER HOOPS TOUR</h1>
         <p style="margin: 8px 0 0; color: ${EMAIL_STYLES.textMuted}; font-size: 14px;">Nuova richiesta di registrazione squadra</p>
       </div>
@@ -261,6 +266,7 @@ export async function notifyAdminNewTeam(team: {
   const html = `
     <div style="font-family: ${EMAIL_STYLES.font}; max-width: 600px; margin: 0 auto; background: ${EMAIL_STYLES.darkerBg}; border-radius: ${EMAIL_STYLES.radius}; overflow: hidden;">
       <div style="background: ${EMAIL_STYLES.darkBg}; padding: 24px 28px; border-bottom: 3px solid ${EMAIL_STYLES.primary};">
+        ${emailLogoHtml()}
         <h1 style="margin: 0; color: ${EMAIL_STYLES.primary}; font-size: 24px; letter-spacing: 0.05em;">ROMAGNA SUMMER HOOPS TOUR</h1>
         <p style="margin: 8px 0 0; color: ${EMAIL_STYLES.textMuted}; font-size: 14px;">Nuova squadra registrata</p>
       </div>
@@ -293,6 +299,7 @@ export async function sendWelcomeToTeam(team: { nome: string; email: string }) {
   const html = `
     <div style="font-family: ${EMAIL_STYLES.font}; max-width: 600px; margin: 0 auto; background: ${EMAIL_STYLES.darkerBg}; border-radius: ${EMAIL_STYLES.radius}; overflow: hidden;">
       <div style="background: ${EMAIL_STYLES.darkBg}; padding: 28px; border-bottom: 3px solid ${EMAIL_STYLES.primary}; text-align: center;">
+        ${emailLogoHtml()}
         <h1 style="margin: 0; color: ${EMAIL_STYLES.primary}; font-size: 26px; letter-spacing: 0.08em;">ROMAGNA SUMMER HOOPS TOUR</h1>
         <p style="margin: 12px 0 0; color: ${EMAIL_STYLES.textMuted}; font-size: 14px;">Benvenuti nel circuito</p>
       </div>
@@ -330,7 +337,8 @@ export async function notifyTeamRejected(application: {
 }) {
   const html = `
     <div style="font-family: ${EMAIL_STYLES.font}; max-width: 600px; margin: 0 auto; background: ${EMAIL_STYLES.darkerBg}; border-radius: ${EMAIL_STYLES.radius}; overflow: hidden;">
-      <div style="background: ${EMAIL_STYLES.darkBg}; padding: 28px; border-bottom: 1px solid ${EMAIL_STYLES.surface};">
+      <div style="background: ${EMAIL_STYLES.darkBg}; padding: 28px; border-bottom: 1px solid ${EMAIL_STYLES.surface}; text-align: center;">
+        ${emailLogoHtml()}
         <h1 style="margin: 0; color: ${EMAIL_STYLES.text}; font-size: 22px;">Romagna Summer Hoops Tour</h1>
       </div>
       <div style="padding: 32px;">
@@ -357,6 +365,7 @@ export async function notifyAdminNewTeamChangeRequest(info: {
   const html = `
     <div style="font-family: ${EMAIL_STYLES.font}; max-width: 600px; margin: 0 auto; background: ${EMAIL_STYLES.darkerBg}; border-radius: ${EMAIL_STYLES.radius}; overflow: hidden;">
       <div style="background: ${EMAIL_STYLES.darkBg}; padding: 24px 28px; border-bottom: 3px solid ${EMAIL_STYLES.primary};">
+        ${emailLogoHtml()}
         <h1 style="margin: 0; color: ${EMAIL_STYLES.primary}; font-size: 24px; letter-spacing: 0.05em;">ROMAGNA SUMMER HOOPS TOUR</h1>
         <p style="margin: 8px 0 0; color: ${EMAIL_STYLES.textMuted}; font-size: 14px;">Nuova richiesta di modifica profilo squadra</p>
       </div>
@@ -381,6 +390,7 @@ export async function notifyTeamChangeRequestApproved(info: { squadra_nome: stri
   const html = `
     <div style="font-family: ${EMAIL_STYLES.font}; max-width: 600px; margin: 0 auto; background: ${EMAIL_STYLES.darkerBg}; border-radius: ${EMAIL_STYLES.radius}; overflow: hidden;">
       <div style="background: ${EMAIL_STYLES.darkBg}; padding: 28px; border-bottom: 3px solid ${EMAIL_STYLES.primary}; text-align: center;">
+        ${emailLogoHtml()}
         <h1 style="margin: 0; color: ${EMAIL_STYLES.primary}; font-size: 26px; letter-spacing: 0.08em;">ROMAGNA SUMMER HOOPS TOUR</h1>
       </div>
       <div style="padding: 32px;">
@@ -404,7 +414,8 @@ export async function notifyTeamChangeRequestRejected(info: {
 }) {
   const html = `
     <div style="font-family: ${EMAIL_STYLES.font}; max-width: 600px; margin: 0 auto; background: ${EMAIL_STYLES.darkerBg}; border-radius: ${EMAIL_STYLES.radius}; overflow: hidden;">
-      <div style="background: ${EMAIL_STYLES.darkBg}; padding: 28px; border-bottom: 1px solid ${EMAIL_STYLES.surface};">
+      <div style="background: ${EMAIL_STYLES.darkBg}; padding: 28px; border-bottom: 1px solid ${EMAIL_STYLES.surface}; text-align: center;">
+        ${emailLogoHtml()}
         <h1 style="margin: 0; color: ${EMAIL_STYLES.text}; font-size: 22px;">Romagna Summer Hoops Tour</h1>
       </div>
       <div style="padding: 32px;">

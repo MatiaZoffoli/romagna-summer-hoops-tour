@@ -22,12 +22,16 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const mockSupabaseChain = {
   update: vi.fn().mockReturnThis(),
-  eq: vi.fn().mockResolvedValue({ error: null }),
+  eq: vi.fn().mockReturnThis(),
   insert: vi.fn().mockResolvedValue({ error: null }),
   upsert: vi.fn().mockResolvedValue({ error: null }),
   select: vi.fn().mockReturnThis(),
-  order: vi.fn().mockResolvedValue({ data: [], error: null }),
+  order: vi.fn().mockReturnThis(),
   single: vi.fn().mockResolvedValue({ data: null, error: null }),
+  then(resolve: (v: { data: unknown[]; error: null }) => void) {
+    resolve({ data: [], error: null });
+    return Promise.resolve();
+  },
 };
 const mockFrom = vi.fn(() => mockSupabaseChain);
 
@@ -41,10 +45,10 @@ describe("admin actions", () => {
   beforeEach(() => {
     process.env.ADMIN_PASSWORD = adminPassword;
     mockFrom.mockReturnValue(mockSupabaseChain);
-    mockSupabaseChain.eq.mockResolvedValue({ error: null });
+    mockSupabaseChain.eq.mockReturnThis();
     mockSupabaseChain.upsert.mockResolvedValue({ error: null });
     mockSupabaseChain.insert.mockResolvedValue({ error: null });
-    mockSupabaseChain.order.mockResolvedValue({ data: [], error: null });
+    mockSupabaseChain.order.mockReturnThis();
     mockSupabaseChain.single.mockResolvedValue({ data: null, error: null });
   });
 
@@ -227,6 +231,10 @@ describe("admin actions", () => {
         risultati: [],
         news: [],
         applications: [],
+        teamApplications: [],
+        teamChangeRequests: [],
+        socialBonusRequests: [],
+        mvps: [],
       });
     });
   });

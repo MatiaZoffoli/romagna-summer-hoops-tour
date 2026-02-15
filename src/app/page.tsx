@@ -24,6 +24,13 @@ export default async function Home() {
         <div className="absolute inset-0 bg-gradient-to-br from-background via-secondary to-background" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,107,53,0.15),transparent_60%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(0,212,255,0.1),transparent_50%)]" />
+        {/* Cyan glow behind logo */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: "radial-gradient(ellipse 80% 60% at 50% 42%, rgba(56, 189, 248, 0.25), transparent 55%)",
+          }}
+        />
 
         {/* Grid pattern overlay */}
         <div
@@ -35,24 +42,26 @@ export default async function Home() {
           }}
         />
 
-        <div className="relative z-10 max-w-5xl mx-auto px-4 text-center">
+        {/* Subtle noise texture */}
+        <div className="absolute inset-0 hero-noise pointer-events-none" aria-hidden />
+
+        <div className="relative z-10 max-w-5xl mx-auto px-4 text-center w-full">
+          {/* Main logo - sticker outline + drop shadow */}
+          <h1 className="mb-8 animate-fade-in-up flex justify-center items-center w-full">
+            <img
+              src="/logo.png"
+              alt="Romagna Summer Hoops Tour"
+              className="w-full max-w-5xl h-auto object-contain"
+            />
+          </h1>
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/30 rounded-full text-primary text-sm font-medium mb-8 animate-fade-in-up">
             <Flame size={16} />
             Stagione 2026 - Iscrizioni Aperte
           </div>
 
-          {/* Main title */}
-          <h1 className="font-[family-name:var(--font-bebas)] text-6xl sm:text-8xl md:text-9xl leading-none tracking-wider mb-6 animate-fade-in-up">
-            <span className="text-foreground">ROMAGNA</span>
-            <br />
-            <span className="gradient-text">SUMMER HOOPS</span>
-            <br />
-            <span className="text-foreground">TOUR</span>
-          </h1>
-
           {/* Subtitle */}
-          <p className="text-lg sm:text-xl text-muted max-w-2xl mx-auto mb-10 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
+          <p className="text-lg sm:text-xl text-foreground/90 max-w-2xl mx-auto mb-10 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
             Il primo circuito estivo di basket 3x3 in Romagna.
             <br className="hidden sm:block" />
             Canestri, musica e street culture - da Maggio a Settembre.
@@ -92,7 +101,7 @@ export default async function Home() {
 
       {/* ===== STATS BAR ===== */}
       <section className="bg-surface border-y border-border py-8">
-        <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+        <div className="max-w-5xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           {[
             { label: "Tappe", value: `${tappe.length}+`, icon: MapPin },
             { label: "Province", value: "3", icon: MapPin },
@@ -115,7 +124,7 @@ export default async function Home() {
       {/* ===== PROSSIMA TAPPA ===== */}
       {prossimaTappa && (
         <section className="py-20 px-4">
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-5xl mx-auto">
             <div className="flex items-center gap-3 mb-8">
               <div className="w-1 h-8 bg-primary rounded-full" />
               <h2 className="font-[family-name:var(--font-bebas)] text-4xl tracking-wider">
@@ -159,7 +168,7 @@ export default async function Home() {
 
       {/* ===== COME FUNZIONA ===== */}
       <section className="py-20 px-4 bg-surface/50">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <div className="flex items-center gap-3 mb-12">
             <div className="w-1 h-8 bg-accent rounded-full" />
             <h2 className="font-[family-name:var(--font-bebas)] text-4xl tracking-wider">
@@ -218,7 +227,7 @@ export default async function Home() {
 
       {/* ===== CLASSIFICA PREVIEW ===== */}
       <section className="py-20 px-4">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
               <div className="w-1 h-8 bg-gold rounded-full" />
@@ -289,7 +298,7 @@ export default async function Home() {
 
       {/* ===== NEWS ===== */}
       <section className="py-20 px-4 bg-surface/50">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
               <div className="w-1 h-8 bg-accent rounded-full" />

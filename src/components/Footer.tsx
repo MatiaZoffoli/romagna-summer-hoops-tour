@@ -4,12 +4,16 @@ import { Instagram, Mail, MapPin } from "lucide-react";
 export default function Footer() {
   return (
     <footer className="bg-surface border-t border-border">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
-              <span className="text-2xl">🏀</span>
+              <img
+                src="/logo.png"
+                alt="Romagna Summer Hoops Tour"
+                className="h-12 w-auto object-contain"
+              />
               <div className="flex flex-col leading-none">
                 <span className="font-[family-name:var(--font-bebas)] text-lg tracking-wider text-primary">
                   ROMAGNA SUMMER

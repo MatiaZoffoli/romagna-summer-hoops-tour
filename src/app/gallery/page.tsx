@@ -12,7 +12,7 @@ export default async function GalleryPage() {
 
   return (
     <div className="pt-24 pb-20">
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="max-w-5xl mx-auto px-4">
         {/* Header */}
         <div className="max-w-3xl mb-12">
           <p className="text-primary text-sm font-semibold uppercase tracking-wider mb-3">

@@ -45,7 +45,7 @@ export default function FinalsPage() {
 
       {/* Info cards */}
       <section className="py-16 px-4 bg-surface/50">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <div className="p-6 bg-surface rounded-xl border border-border text-center">
             <Trophy size={24} className="text-gold mx-auto mb-3" />
             <p className="font-[family-name:var(--font-bebas)] text-xl tracking-wider">FORMATO</p>
@@ -75,7 +75,7 @@ export default function FinalsPage() {
 
       {/* Bracket / Gironi */}
       <section className="py-20 px-4">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <div className="flex items-center gap-3 mb-10">
             <div className="w-1 h-8 bg-gold rounded-full" />
             <h2 className="font-[family-name:var(--font-bebas)] text-4xl tracking-wider">

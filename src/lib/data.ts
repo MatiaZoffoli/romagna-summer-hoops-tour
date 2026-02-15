@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { parseItalianDate } from "@/lib/date-utils";
 import type { DbTappa, DbSquadra, DbGiocatore, DbRisultato, DbNews, DbMvp, SquadraConPunti, TappaConRisultati } from "@/lib/types";
 import { tappe as placeholderTappe, squadre as placeholderSquadre, news as placeholderNews, sistemaPunteggio as placeholderPunteggio, crew as placeholderCrew } from "@/data/placeholder";
 
@@ -41,26 +42,13 @@ function normalizeTappa(row: Record<string, unknown>): DbTappa {
     stato: normalizeStato(row?.stato),
     lat: lat != null && !Number.isNaN(lat) ? lat : null,
     lng: lng != null && !Number.isNaN(lng) ? lng : null,
+    logo_url: row?.logo_url != null ? String(row.logo_url) : null,
     created_at: row?.created_at != null ? String(row.created_at) : new Date().toISOString(),
   };
 }
 
-const IT_MONTHS: Record<string, number> = {
-  gennaio: 1, febbraio: 2, marzo: 3, aprile: 4, maggio: 5, giugno: 6,
-  luglio: 7, agosto: 8, settembre: 9, ottobre: 10, novembre: 11, dicembre: 12,
-};
-
-/** Parse Italian date string (e.g. "Sabato 11 Luglio 2026" or "11 Luglio 2026") to Date at noon UTC. */
-export function parseItalianDate(dataStr: string): Date | null {
-  const s = dataStr.trim().toLowerCase();
-  const match = s.match(/(\d{1,2})\s+(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)\s+(\d{4})/);
-  if (!match) return null;
-  const [, day, monthName, year] = match;
-  const month = IT_MONTHS[monthName];
-  if (!month) return null;
-  const d = new Date(Date.UTC(Number(year), month - 1, Number(day), 12, 0, 0));
-  return isNaN(d.getTime()) ? null : d;
-}
+// Re-export for callers that already import from data
+export { parseItalianDate } from "@/lib/date-utils";
 
 export async function getTappe(): Promise<DbTappa[]> {
   if (!isSupabaseConfigured()) {
@@ -81,6 +69,7 @@ export async function getTappe(): Promise<DbTappa[]> {
       stato: t.stato,
       lat: null,
       lng: null,
+      logo_url: null,
       created_at: new Date().toISOString(),
     }));
   }
@@ -113,17 +102,17 @@ export async function getTappe(): Promise<DbTappa[]> {
       stato: t.stato,
       lat: null,
       lng: null,
+      logo_url: null,
       created_at: new Date().toISOString(),
     }));
   }
 }
 
-/** Next tappa whose date is within the next 7 days (for promo popup). */
-export async function getProssimaTappaPromo(): Promise<DbTappa | null> {
-  const tappe = await getTappe();
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const in7 = new Date(now);
+/** Pure: find first tappa whose date is within [now, now+7 days]. Used for promo popup. */
+export function findNextPromoTappa(tappe: DbTappa[], now: Date): DbTappa | null {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const in7 = new Date(start);
   in7.setDate(in7.getDate() + 7);
 
   for (const t of tappe) {
@@ -131,9 +120,15 @@ export async function getProssimaTappaPromo(): Promise<DbTappa | null> {
     const d = parseItalianDate(t.data);
     if (!d) continue;
     d.setHours(0, 0, 0, 0);
-    if (d >= now && d <= in7) return t;
+    if (d >= start && d <= in7) return t;
   }
   return null;
+}
+
+/** Next tappa whose date is within the next 7 days (for promo popup). */
+export async function getProssimaTappaPromo(): Promise<DbTappa | null> {
+  const tappe = await getTappe();
+  return findNextPromoTappa(tappe, new Date());
 }
 
 export async function getTappaBySlug(slug: string): Promise<TappaConRisultati | null> {
@@ -157,6 +152,7 @@ export async function getTappaBySlug(slug: string): Promise<TappaConRisultati | 
       stato: t.stato,
       lat: null,
       lng: null,
+      logo_url: null,
       created_at: new Date().toISOString(),
       risultati: [],
     };
@@ -357,23 +353,27 @@ export async function getNews(): Promise<DbNews[]> {
 // ============================================
 // CLASSIFICA (Rankings)
 // ============================================
-export async function getClassifica() {
-  const squadre = await getSquadreConPunti();
-  const tappe = await getTappe();
 
-  const lastTappaId = tappe.length > 0 ? tappe[tappe.length - 1].id : null;
-  const classificaOrdinata = [...squadre].sort((a, b) => {
+/** Pure: sort squadre by classifica rules (punti desc, tappe_giocate, avg position, last tappa position). */
+export function sortClassifica(squadre: SquadraConPunti[], lastTappaId: string | null): SquadraConPunti[] {
+  return [...squadre].sort((a, b) => {
     if (b.punti_totali !== a.punti_totali) return b.punti_totali - a.punti_totali;
     if (b.tappe_giocate !== a.tappe_giocate) return b.tappe_giocate - a.tappe_giocate;
     const avgPos = (s: SquadraConPunti) =>
-      s.risultati?.length ? s.risultati.reduce((s, r) => s + (r.posizione ?? 0), 0) / s.risultati.length : 999;
+      s.risultati?.length ? s.risultati.reduce((sum, r) => sum + (r.posizione ?? 0), 0) / s.risultati.length : 999;
     if (avgPos(a) !== avgPos(b)) return avgPos(a) - avgPos(b);
     const lastPos = (s: SquadraConPunti) =>
       lastTappaId && s.risultati ? (s.risultati.find((r) => r.tappa_id === lastTappaId)?.posizione ?? 999) : 999;
     return lastPos(a) - lastPos(b);
   });
+}
 
-  // Return full ordered list; UI greys out teams with <2 tappe
+export async function getClassifica() {
+  const squadre = await getSquadreConPunti();
+  const tappe = await getTappe();
+  const lastTappaId = tappe.length > 0 ? tappe[tappe.length - 1].id : null;
+  const classificaOrdinata = sortClassifica(squadre, lastTappaId);
+
   return {
     squadre: classificaOrdinata,
     tappe,

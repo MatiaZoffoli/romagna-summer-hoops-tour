@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { Shield, Trophy, Plus, Newspaper, MapPin, Loader2, CheckCircle, Lock, FileText, X, Eye, Edit2, Copy, ImageIcon, Users, Share2, Award } from "lucide-react";
-import { addTappaResult, updateTappaStatus, addNews, addTappa, getAdminData, approveTappaApplication, rejectTappaApplication, approveTeamApplication, rejectTeamApplication, createSquadraAdmin, updateSquadraAdmin, deleteRisultatoAdmin, approveTeamChangeRequest, rejectTeamChangeRequest, sendTestEmail, approveSocialBonusRequest, rejectSocialBonusRequest, createMvp, updateMvp, deleteMvp } from "@/app/actions/admin";
+import { addTappaResult, updateTappaStatus, addTappa, updateTappaLogo, addNews, getAdminData, approveTappaApplication, rejectTappaApplication, approveTeamApplication, rejectTeamApplication, createSquadraAdmin, updateSquadraAdmin, deleteRisultatoAdmin, approveTeamChangeRequest, rejectTeamChangeRequest, sendTestEmail, approveSocialBonusRequest, rejectSocialBonusRequest, createMvp, updateMvp, deleteMvp } from "@/app/actions/admin";
 import { sistemaPunteggio } from "@/data/placeholder";
 import AckModal from "@/components/AckModal";
 import { AVATAR_ICON_OPTIONS, AVATAR_COLOR_OPTIONS } from "@/lib/avatar-presets";
@@ -39,7 +39,7 @@ function NewsCaptionRow({ id, titolo, instagramCaption }: { id: string; titolo: 
 }
 
 interface AdminData {
-  tappe: { id: string; slug: string; nome: string; stato: string }[];
+  tappe: { id: string; slug: string; nome: string; stato: string; logo_url: string | null }[];
   squadre: {
     id: string;
     nome: string;
@@ -215,6 +215,21 @@ export default function AdminPage() {
       showMessage("Tappa aggiunta!");
       await refreshData();
       (e.target as HTMLFormElement).reset();
+    }
+    setLoading(false);
+  }
+
+  async function handleUpdateTappaLogo(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const formData = new FormData(e.currentTarget);
+    formData.set("adminPassword", password);
+    const result = await updateTappaLogo(formData);
+    if (result.error) setError(result.error);
+    else {
+      showMessage("Logo aggiornato!");
+      await refreshData();
     }
     setLoading(false);
   }
@@ -726,6 +741,34 @@ export default function AdminPage() {
                 </form>
               ))}
             </div>
+
+            <h3 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider mt-10 mb-4">
+              LOGO TAPPE
+            </h3>
+            <p className="text-sm text-muted mb-4">Stesso logo mostrato sulla mappa e nella pagina tappa. URL o carica immagine.</p>
+            <div className="space-y-4">
+              {data?.tappe.map((t) => (
+                <form key={`logo-${t.id}`} onSubmit={handleUpdateTappaLogo} className="flex flex-wrap items-center gap-4 p-4 bg-background rounded-xl border border-border">
+                  <input type="hidden" name="tappaId" value={t.id} />
+                  {t.logo_url ? (
+                    <div className="w-14 h-14 rounded-lg overflow-hidden border border-border shrink-0 bg-surface">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={t.logo_url} alt="" className="w-full h-full object-contain" />
+                    </div>
+                  ) : (
+                    <div className="w-14 h-14 rounded-lg border border-dashed border-border flex items-center justify-center shrink-0">
+                      <ImageIcon size={20} className="text-muted" />
+                    </div>
+                  )}
+                  <span className="font-semibold text-foreground min-w-[100px]">{t.nome}</span>
+                  <input name="logoUrl" type="url" placeholder="URL logo" defaultValue={t.logo_url ?? ""} className="flex-1 min-w-[180px] px-3 py-2 bg-surface border border-border rounded-lg text-sm" />
+                  <input name="logo" type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="text-sm text-muted file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:bg-primary file:text-white file:text-xs" />
+                  <button type="submit" disabled={loading} className="px-4 py-2 bg-primary text-white text-sm rounded-full hover:bg-primary-dark transition-colors disabled:opacity-50">
+                    Salva logo
+                  </button>
+                </form>
+              ))}
+            </div>
           </div>
         )}
 
@@ -784,6 +827,14 @@ export default function AdminPage() {
                 <div>
                   <label className="block text-sm text-muted mb-2">Instagram</label>
                   <input name="instagram" placeholder="@handle" className={inputClass} />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm text-muted mb-2">Logo tappa (URL)</label>
+                  <input name="logoUrl" type="url" placeholder="https://..." className={inputClass} />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm text-muted mb-2">Oppure carica immagine</label>
+                  <input name="logo" type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="w-full text-sm text-muted file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-primary file:text-white file:text-sm" />
                 </div>
                 <div>
                   <label className="block text-sm text-muted mb-2">Stato</label>

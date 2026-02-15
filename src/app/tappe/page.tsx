@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MapPin, Calendar, ArrowRight, Clock } from "lucide-react";
 import { getTappe } from "@/lib/data";
+import TappeMap from "./mappa/TappeMap";
 
 export const revalidate = 60;
 
@@ -12,6 +13,12 @@ const statoBadge: Record<string, { label: string; className: string }> = {
   conclusa: { label: "CONCLUSA", className: "bg-green-500/20 text-green-400 border-green-500/30" },
 };
 
+type TappaWithCoords = Awaited<ReturnType<typeof getTappe>>[number] & { lat: number; lng: number };
+
+function hasCoords(t: Awaited<ReturnType<typeof getTappe>>[number]): t is TappaWithCoords {
+  return t.lat != null && t.lng != null;
+}
+
 export default async function TappePage() {
   let tappe: Awaited<ReturnType<typeof getTappe>> = [];
   try {
@@ -20,12 +27,23 @@ export default async function TappePage() {
     tappe = [];
   }
   const list = Array.isArray(tappe) ? tappe : [];
+  const tappeConCoordinate = list.filter(hasCoords);
 
   return (
     <div className="pt-24 pb-20">
-      <section className="max-w-7xl mx-auto px-4">
-        {/* Header */}
-        <div className="max-w-3xl mb-12">
+      <section className="max-w-5xl mx-auto px-4">
+        {/* Map first */}
+        <div id="mappa" className="mb-10">
+          <div className="rounded-2xl border border-border overflow-hidden bg-surface">
+            <TappeMap tappe={tappeConCoordinate} />
+          </div>
+          <p className="text-sm text-muted mt-3 text-center">
+            Le tappe del Romagna Summer Hoops Tour sulla mappa. Clicca su un marker per dettagli e link.
+          </p>
+        </div>
+
+        {/* Header + list */}
+        <div className="max-w-3xl mb-8">
           <p className="text-primary text-sm font-semibold uppercase tracking-wider mb-3">
             Calendario Ufficiale
           </p>
@@ -36,11 +54,6 @@ export default async function TappePage() {
             Ogni tappa è un torneo 3x3 indipendente che assegna punti per la classifica
             generale del Tour. Contatta direttamente l&apos;organizzatore per iscriverti.
           </p>
-          <Link href="/tappe/mappa" className="inline-flex items-center gap-2 text-sm text-primary hover:text-gold transition-colors">
-            <MapPin size={16} />
-            Vedi la mappa del Tour
-            <ArrowRight size={14} />
-          </Link>
         </div>
 
         {/* Tappe grid */}

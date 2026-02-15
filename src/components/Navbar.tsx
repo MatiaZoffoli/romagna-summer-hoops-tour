@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Menu, X, Trophy, Users, MapPin, Newspaper, Star, Phone, LogIn, Camera, Award } from "lucide-react";
+import { Menu, X, Trophy, Users, MapPin, Newspaper, Star, Phone, LogIn, Camera, Award, Home } from "lucide-react";
 
 const navLinks = [
   { href: "/il-tour", label: "Il Tour", icon: Star },
@@ -22,19 +22,16 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-md border-b border-border">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <span className="text-2xl">🏀</span>
-            <div className="flex flex-col leading-none">
-              <span className="font-[family-name:var(--font-bebas)] text-xl tracking-wider text-primary group-hover:text-gold transition-colors">
-                ROMAGNA SUMMER
-              </span>
-              <span className="font-[family-name:var(--font-bebas)] text-sm tracking-widest text-foreground/80">
-                HOOPS TOUR
-              </span>
-            </div>
+          {/* Home */}
+          <Link
+            href="/"
+            className="flex items-center gap-2 px-4 py-2 rounded-full border border-primary/50 text-primary hover:bg-primary/10 hover:border-primary transition-colors text-sm font-medium"
+            aria-label="Home"
+          >
+            <Home size={18} />
+            <span className="hidden sm:inline">Home</span>
           </Link>
 
           {/* Desktop nav */}

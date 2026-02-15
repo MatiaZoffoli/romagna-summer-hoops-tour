@@ -146,8 +146,8 @@ export async function signup(formData: FormData) {
 export async function login(formData: FormData) {
   const supabase = await createClient();
 
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
+  const email = (formData.get("email") as string)?.trim()?.toLowerCase() ?? "";
+  const password = (formData.get("password") as string)?.trim() ?? "";
 
   if (!email || !password) {
     return { error: "Email e password sono obbligatori." };
@@ -159,7 +159,9 @@ export async function login(formData: FormData) {
   });
 
   if (error) {
-    return { error: "Email o password non corretti." };
+    const hint =
+      " Se la tua richiesta è stata appena approvata, usa la password indicata nella richiesta. Altrimenti prova con \"Password dimenticata?\" per reimpostarla.";
+    return { error: "Email o password non corretti." + hint };
   }
 
   redirect("/dashboard");

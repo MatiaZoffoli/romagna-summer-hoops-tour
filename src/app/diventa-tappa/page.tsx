@@ -245,6 +245,25 @@ export default function DiventaTappaPage() {
               </div>
 
               <div>
+                <label className="block text-sm text-muted mb-2">Logo del torneo (URL)</label>
+                <input
+                  name="logoUrl"
+                  type="url"
+                  placeholder="https://..."
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-muted mb-2">Oppure carica immagine</label>
+                <input
+                  name="logo"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="w-full text-sm text-muted file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-primary file:text-white file:text-sm"
+                />
+              </div>
+
+              <div>
                 <label className="block text-sm text-muted mb-2">Descrizione</label>
                 <textarea
                   name="descrizione"

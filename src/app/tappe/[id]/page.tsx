@@ -31,6 +31,16 @@ export default async function TappaDetailPage({ params }: TappaPageProps) {
 
         {/* Header */}
         <div className="mb-10">
+          {tappa.logo_url && (
+            <div className="mb-6">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={tappa.logo_url}
+                alt=""
+                className="h-20 w-auto object-contain rounded-xl border border-border bg-surface"
+              />
+            </div>
+          )}
           <div className="flex items-center gap-3 mb-4">
             <span
               className={`px-3 py-1 text-xs font-semibold rounded-full border ${

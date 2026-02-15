@@ -6,7 +6,7 @@
   --color-primary: #FF6B35;
   --color-primary-dark: #E55A2B;
   --color-secondary: #1E1E3F;
-  --color-accent: #00D4FF;
+  --color-accent: #38BDF8;
   --color-gold: #FFD700;
   --color-surface: #1A1A2E;
   --color-surface-light: #2A2A4A;
@@ -84,4 +84,21 @@ html {
   opacity: 0.4;
   pointer-events: none;
   position: relative;
+}
+
+/* Hero noise texture overlay */
+.hero-noise {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.04;
+  mix-blend-mode: overlay;
+}
+
+/* Leaflet custom tappa marker: no default icon background */
+.custom-tappa-marker {
+  background: none !important;
+  border: none !important;
+}
+.custom-tappa-marker > div {
+  margin-left: -20px;
+  margin-top: -40px;
 }

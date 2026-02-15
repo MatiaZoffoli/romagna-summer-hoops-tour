@@ -59,6 +59,7 @@ create table public.tappe (
   stato text default 'confermata' check (stato in ('pending', 'confermata', 'in_corso', 'in_attesa_risultati', 'conclusa')),
   lat double precision,
   lng double precision,
+  logo_url text,
   created_at timestamp with time zone default now()
 );
 
@@ -153,6 +154,7 @@ create table public.tappa_applications (
   -- Additional info
   numero_squadre_previste integer,
   note_aggiuntive text,
+  logo_url text,
   -- Status
   stato text default 'pending' check (stato in ('pending', 'approved', 'rejected')),
   -- Timestamps

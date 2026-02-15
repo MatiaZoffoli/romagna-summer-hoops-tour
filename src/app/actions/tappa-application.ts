@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { notifyAdminNewApplication } from "@/lib/email";
+import { uploadTappaLogoFile } from "@/app/actions/tappa-logo";
 
 export async function submitTappaApplication(formData: FormData) {
   const supabase = await createClient();
@@ -21,6 +22,15 @@ export async function submitTappaApplication(formData: FormData) {
   const descrizione = formData.get("descrizione") as string;
   const numeroSquadrePreviste = formData.get("numeroSquadrePreviste") as string;
   const noteAggiuntive = formData.get("noteAggiuntive") as string;
+  let logoUrl = (formData.get("logoUrl") as string)?.trim() || null;
+  const logoFile = formData.get("logo") as File | null;
+  if (logoFile && logoFile.size > 0) {
+    const fd = new FormData();
+    fd.append("logo", logoFile);
+    const up = await uploadTappaLogoFile(fd);
+    if (up.error) return { error: up.error };
+    if (up.url) logoUrl = up.url;
+  }
 
   if (!nomeOrganizzatore || !emailOrganizzatore || !nomeTorneo || !dataProposta || !luogo) {
     return { error: "I campi obbligatori devono essere compilati." };
@@ -41,6 +51,7 @@ export async function submitTappaApplication(formData: FormData) {
     descrizione: descrizione || null,
     numero_squadre_previste: numeroSquadrePreviste ? parseInt(numeroSquadrePreviste) : null,
     note_aggiuntive: noteAggiuntive || null,
+    logo_url: logoUrl,
     stato: "pending",
   });
 

@@ -98,29 +98,33 @@ export default function DashboardClient({
     }
     setSaved(true);
     setSaving(false);
+    router.refresh();
+  }
 
-    if (!squadra.logo_generated_at) {
-      setGeneratingLogo(true);
-      setLogoProgress(0);
-      const interval = setInterval(() => {
-        setLogoProgress((p) => Math.min(p + 12, 90));
-      }, 800);
-      const nome = (form.querySelector('[name="nome"]') as HTMLInputElement)?.value?.trim() || squadra.nome;
-      const motto = (form.querySelector('[name="motto"]') as HTMLInputElement)?.value?.trim() || squadra.motto || null;
-      const genResult = await generateTeamLogo({ nome, motto: motto || undefined });
-      clearInterval(interval);
-      setLogoProgress(100);
-      setGeneratingLogo(false);
-      if (genResult?.error) {
-        setError(genResult.error);
-        return;
-      }
-      if (genResult && "generated_logo_url" in genResult && genResult.generated_logo_url) {
-        setGeneratedLogoUrl(genResult.generated_logo_url);
-        setShowChooseLogo(true);
-      }
-      router.refresh();
+  async function handleGenerateLogo() {
+    if (squadra.logo_generated_at) return;
+    setError("");
+    setGeneratingLogo(true);
+    setLogoProgress(0);
+    const interval = setInterval(() => {
+      setLogoProgress((p) => Math.min(p + 12, 90));
+    }, 800);
+    const form = document.getElementById("dashboard-profile-form") as HTMLFormElement | undefined;
+    const nome = form?.querySelector('[name="nome"]') ? (form.querySelector('[name="nome"]') as HTMLInputElement).value?.trim() : squadra.nome;
+    const motto = form?.querySelector('[name="motto"]') ? (form.querySelector('[name="motto"]') as HTMLInputElement).value?.trim() || null : squadra.motto || null;
+    const genResult = await generateTeamLogo({ nome: nome || squadra.nome, motto: motto ?? undefined });
+    clearInterval(interval);
+    setLogoProgress(100);
+    setGeneratingLogo(false);
+    if (genResult?.error) {
+      setError(genResult.error);
+      return;
     }
+    if (genResult && "generated_logo_url" in genResult && genResult.generated_logo_url) {
+      setGeneratedLogoUrl(genResult.generated_logo_url);
+      setShowChooseLogo(true);
+    }
+    router.refresh();
   }
 
   async function confirmLogoChoice() {
@@ -312,6 +316,22 @@ export default function DashboardClient({
                           ))}
                         </select>
                       </div>
+                    </div>
+                    <div className="pt-2">
+                      <p className="text-xs text-muted mb-2">Una sola generazione consentita per squadra.</p>
+                      {squadra.logo_generated_at ? (
+                        <p className="text-sm text-muted">Logo già generato.</p>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleGenerateLogo}
+                          disabled={generatingLogo}
+                          className="px-4 py-2 rounded-full bg-primary/20 text-primary border border-primary hover:bg-primary hover:text-white transition-colors flex items-center gap-2 text-sm font-medium disabled:opacity-50"
+                        >
+                          {generatingLogo ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={16} />}
+                          {generatingLogo ? "Generazione in corso..." : "Genera logo con AI"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

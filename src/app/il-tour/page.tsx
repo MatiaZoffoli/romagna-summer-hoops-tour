@@ -5,7 +5,7 @@ export default function IlTourPage() {
   return (
     <div className="pt-24 pb-20">
       {/* Header */}
-      <section className="max-w-7xl mx-auto px-4 mb-16">
+      <section className="max-w-5xl mx-auto px-4 mb-16">
         <div className="max-w-3xl">
           <p className="text-primary text-sm font-semibold uppercase tracking-wider mb-3">
             Regolamento Ufficiale
@@ -24,7 +24,7 @@ export default function IlTourPage() {
       </section>
 
       {/* Vision */}
-      <section className="max-w-7xl mx-auto px-4 mb-20">
+      <section className="max-w-5xl mx-auto px-4 mb-20">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[
             {
@@ -54,7 +54,7 @@ export default function IlTourPage() {
 
       {/* Ambito */}
       <section className="bg-surface/50 py-16 px-4 mb-20">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-1 h-8 bg-accent rounded-full" />
             <h2 className="font-[family-name:var(--font-bebas)] text-4xl tracking-wider">
@@ -83,7 +83,7 @@ export default function IlTourPage() {
       </section>
 
       {/* Struttura */}
-      <section className="max-w-7xl mx-auto px-4 mb-20">
+      <section className="max-w-5xl mx-auto px-4 mb-20">
         <div className="flex items-center gap-3 mb-8">
           <div className="w-1 h-8 bg-primary rounded-full" />
           <h2 className="font-[family-name:var(--font-bebas)] text-4xl tracking-wider">
@@ -119,7 +119,7 @@ export default function IlTourPage() {
 
       {/* Squadre e identità */}
       <section className="bg-surface/50 py-16 px-4 mb-20">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-1 h-8 bg-gold rounded-full" />
             <h2 className="font-[family-name:var(--font-bebas)] text-4xl tracking-wider">
@@ -176,7 +176,7 @@ export default function IlTourPage() {
       </section>
 
       {/* Sistema punteggio */}
-      <section className="max-w-7xl mx-auto px-4 mb-20">
+      <section className="max-w-5xl mx-auto px-4 mb-20">
         <div className="flex items-center gap-3 mb-8">
           <div className="w-1 h-8 bg-primary rounded-full" />
           <h2 className="font-[family-name:var(--font-bebas)] text-4xl tracking-wider">
