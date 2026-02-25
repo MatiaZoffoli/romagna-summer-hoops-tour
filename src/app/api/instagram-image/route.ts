@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const OEMBED_BASE = "https://api.instagram.com/oembed";
-
-// Allow Instagram post/reel URLs with optional query params (e.g. ?igsh=...)
 function isValidInstagramPostUrl(url: string): boolean {
   try {
     const u = new URL(url);
@@ -14,6 +11,8 @@ function isValidInstagramPostUrl(url: string): boolean {
   }
 }
 
+const OG_IMAGE_REGEX = /<meta\s+property="og:image"\s+content="([^"]+)"/i;
+
 export async function GET(request: NextRequest) {
   const url = request.nextUrl.searchParams.get("url");
   if (!url || !isValidInstagramPostUrl(url)) {
@@ -21,42 +20,37 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const oembedUrl = `${OEMBED_BASE}?url=${encodeURIComponent(url)}`;
-    const res = await fetch(oembedUrl, {
+    const res = await fetch(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept: "application/json",
+        Accept: "text/html",
       },
       next: { revalidate: 3600 },
     });
 
-    const text = await res.text();
     if (!res.ok) {
       return NextResponse.json(
-        { error: "Instagram oEmbed failed", details: text.slice(0, 500) },
-        { status: res.status }
-      );
-    }
-
-    let data: { html?: string; error?: string; thumbnail_url?: string };
-    try {
-      data = JSON.parse(text);
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON from Instagram" }, { status: 502 });
-    }
-
-    if (data.error) {
-      return NextResponse.json(
-        { error: data.error },
+        { error: "Failed to fetch post page" },
         { status: 502 }
       );
     }
 
-    return NextResponse.json(data);
+    const html = await res.text();
+    const match = html.match(OG_IMAGE_REGEX);
+    const imageUrl = match ? match[1].trim() : null;
+
+    if (!imageUrl) {
+      return NextResponse.json(
+        { error: "No og:image in response" },
+        { status: 502 }
+      );
+    }
+
+    return NextResponse.json({ imageUrl });
   } catch (err) {
-    console.error("instagram-oembed:", err);
+    console.error("instagram-image:", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to fetch oEmbed" },
+      { error: err instanceof Error ? err.message : "Failed to fetch image" },
       { status: 500 }
     );
   }

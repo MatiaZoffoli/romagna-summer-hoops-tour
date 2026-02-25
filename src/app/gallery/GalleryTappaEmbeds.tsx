@@ -1,117 +1,109 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Instagram, ExternalLink } from "lucide-react";
 import type { DbTappa } from "@/lib/types";
 
-const EMBED_SCRIPT_URL = "https://www.instagram.com/embed.js";
+const ASPECT_RATIO = 1; // 1:1
 
-function getInstagramEmbedIframeUrl(postUrl: string): string | null {
-  try {
-    const u = new URL(postUrl);
-    const match = u.pathname.match(/^\/(p|reel)\/([A-Za-z0-9_-]+)\/?$/);
-    if (!match) return null;
-    const [, type, id] = match;
-    return `https://www.instagram.com/${type}/${id}/embed/`;
-  } catch {
-    return null;
-  }
-}
-
-function InstagramPostEmbed({ url }: { url: string }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [html, setHtml] = useState<string | null>(null);
-  const [useFallbackIframe, setUseFallbackIframe] = useState(false);
+function InstagramImageCard({ url }: { url: string }) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+
+    function setImage(src: string) {
+      if (!cancelled) setImageUrl(src);
+    }
+
+    function onFail() {
+      if (!cancelled) setFailed(true);
+    }
+
     const params = new URLSearchParams({ url });
+
     fetch(`/api/instagram-oembed?${params.toString()}`)
-      .then((res) => res.json())
-      .then((data: { html?: string; error?: string }) => {
+      .then((res) => res.ok ? res.json() : Promise.reject(new Error("oEmbed failed")))
+      .then((data: { thumbnail_url?: string }) => {
         if (cancelled) return;
-        if (data?.html) setHtml(data.html);
-        else setUseFallbackIframe(true);
+        if (data?.thumbnail_url) {
+          setImage(data.thumbnail_url);
+          return;
+        }
+        return fetch(`/api/instagram-image?${params.toString()}`)
+          .then((r) => r.ok ? r.json() : Promise.reject(new Error("No image")))
+          .then((data: { imageUrl?: string }) => {
+            if (cancelled) return;
+            if (data?.imageUrl) setImage(data.imageUrl);
+            else onFail();
+          });
       })
       .catch(() => {
-        if (!cancelled) setUseFallbackIframe(true);
+        if (cancelled) return;
+        fetch(`/api/instagram-image?${params.toString()}`)
+          .then((r) => r.ok ? r.json() : Promise.reject(new Error("No image")))
+          .then((data: { imageUrl?: string }) => {
+            if (cancelled) return;
+            if (data?.imageUrl) setImage(data.imageUrl);
+            else onFail();
+          })
+          .catch(() => onFail());
       });
+
     return () => { cancelled = true; };
   }, [url]);
 
-  useProcessInstagramEmbeds(html);
-
-  const embedIframeUrl = useFallbackIframe ? getInstagramEmbedIframeUrl(url) : null;
-
-  if (useFallbackIframe && !embedIframeUrl) {
+  if (failed) {
     return (
-      <div className="flex items-center justify-center w-full max-w-[320px] min-h-[320px] bg-surface rounded-xl border border-dashed border-border text-muted text-sm p-4">
-        <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors text-center">
-          Post non disponibile · Apri su Instagram
-        </a>
-      </div>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center w-full max-w-[400px] rounded-xl border border-dashed border-border bg-surface text-muted text-sm p-6 hover:text-primary transition-colors"
+        style={{ aspectRatio: String(ASPECT_RATIO) }}
+      >
+        Post non disponibile · Apri su Instagram
+      </a>
     );
   }
 
-  if (embedIframeUrl) {
+  if (!imageUrl) {
     return (
-      <div className="w-full max-w-[320px] rounded-xl border border-border overflow-hidden bg-surface">
-        <iframe
-          src={embedIframeUrl}
-          title="Instagram post"
-          className="w-full border-0 min-h-[400px]"
-          allow="encrypted-media"
-        />
-      </div>
-    );
-  }
-
-  if (!html) {
-    return (
-      <div className="flex items-center justify-center w-full max-w-[320px] min-h-[320px] bg-surface rounded-xl border border-border animate-pulse">
+      <div
+        className="flex items-center justify-center w-full max-w-[400px] rounded-xl border border-border bg-surface animate-pulse"
+        style={{ aspectRatio: String(ASPECT_RATIO) }}
+      >
         <span className="text-muted text-sm">Caricamento...</span>
       </div>
     );
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="instagram-embed-wrapper w-full max-w-[320px] [&_.instagram-media]:max-w-full [&_.instagram-media]:min-w-0 [&_iframe]:max-w-full [&_iframe]:!min-h-[400px]"
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group block w-full max-w-[400px] rounded-xl border border-border overflow-hidden bg-surface focus:outline-none focus:ring-2 focus:ring-primary"
+      style={{ aspectRatio: String(ASPECT_RATIO) }}
+    >
+      <div className="relative w-full h-full">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={imageUrl}
+          alt=""
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/90 text-gray-900 text-sm font-medium">
+            <Instagram size={18} />
+            View on Instagram
+            <ExternalLink size={14} />
+          </span>
+        </div>
+      </div>
+    </a>
   );
-}
-
-function useProcessInstagramEmbeds(html: string | null) {
-  useEffect(() => {
-    if (!html) return;
-    const t = setTimeout(() => {
-      if (typeof window !== "undefined" && (window as unknown as { instgrm?: { Embeds?: { process: () => void } } }).instgrm?.Embeds?.process) {
-        (window as unknown as { instgrm: { Embeds: { process: () => void } } }).instgrm.Embeds.process();
-      }
-    }, 100);
-    return () => clearTimeout(t);
-  }, [html]);
-}
-
-/** Load Instagram embed.js once so blockquotes become iframes */
-function useInstagramEmbedScript() {
-  const loaded = useRef(false);
-  useEffect(() => {
-    if (loaded.current) return;
-    if (typeof document === "undefined") return;
-    const existing = document.querySelector(`script[src="${EMBED_SCRIPT_URL}"]`);
-    if (existing) {
-      loaded.current = true;
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = EMBED_SCRIPT_URL;
-    script.async = true;
-    document.body.appendChild(script);
-    loaded.current = true;
-  }, []);
 }
 
 export interface TappaWithPhotos {
@@ -120,8 +112,6 @@ export interface TappaWithPhotos {
 }
 
 export default function GalleryTappaEmbeds({ items }: { items: TappaWithPhotos[] }) {
-  useInstagramEmbedScript();
-
   if (items.length === 0) return null;
 
   return (
@@ -150,7 +140,7 @@ export default function GalleryTappaEmbeds({ items }: { items: TappaWithPhotos[]
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             {postUrls.map((url) => (
-              <InstagramPostEmbed key={url} url={url} />
+              <InstagramImageCard key={url} url={url} />
             ))}
           </div>
         </section>
