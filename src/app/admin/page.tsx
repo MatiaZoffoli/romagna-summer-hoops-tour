@@ -266,12 +266,15 @@ export default function AdminPage() {
       const formData = new FormData(e.currentTarget);
       formData.set("adminPassword", password);
       const result = await addGalleryTappaImage(formData);
-      if (result.error) setError(result.error);
-      else {
-        showMessage("Immagine aggiunta alla gallery.");
-        await refreshData();
-        (e.target as HTMLFormElement).reset();
+      if (result.error) {
+        setError(result.error);
+        return;
       }
+      showMessage("Immagine aggiunta alla gallery.");
+      await refreshData();
+      (e.target as HTMLFormElement).reset();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Errore durante l'aggiunta.");
     } finally {
       setLoading(false);
     }
@@ -1049,6 +1052,11 @@ export default function AdminPage() {
               <h3 className="font-[family-name:var(--font-bebas)] text-lg tracking-wider mb-2 text-primary">
                 IMMAGINI CARICATE (max 3 per tappa)
               </h3>
+              {error && (
+                <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
               <p className="text-sm text-muted mb-6">
                 Carica fino a 3 immagini per ogni tappa. Verranno mostrate nella pagina Gallery come quadrati uniformi (ritaglio al centro). Puoi caricare un file o incollare l&apos;URL di un&apos;immagine.
               </p>

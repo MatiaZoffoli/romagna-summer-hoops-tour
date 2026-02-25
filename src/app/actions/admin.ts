@@ -396,60 +396,67 @@ export async function removeGalleryPhoto(formData: FormData) {
 
 /** Add a gallery tappa image (uploaded URL). Max 3 per tappa. */
 export async function addGalleryTappaImage(formData: FormData) {
-  const password = formData.get("adminPassword") as string;
-  if (!verifyAdmin(password)) {
-    return { error: "Password admin non valida." };
-  }
-
-  const tappaId = (formData.get("tappaId") as string)?.trim();
-  if (!tappaId) return { error: "Tappa non specificata." };
-
-  let imageUrl = (formData.get("imageUrl") as string)?.trim();
-  const imageFile = formData.get("image") as File | null;
-  if (imageFile && imageFile.size > 0) {
-    const fd = new FormData();
-    fd.append("adminPassword", password);
-    fd.append("image", imageFile);
-    const up = await uploadGalleryImageFile(fd);
-    if (up.error) return { error: up.error };
-    if (up.url) imageUrl = up.url;
-  }
-  if (!imageUrl || !imageUrl.startsWith("http")) {
-    return { error: "Carica un'immagine o incolla un URL valido." };
-  }
-
-  const supabase = createServiceRoleClient();
-  const { data: existing } = await supabase
-    .from("gallery_tappa_images")
-    .select("ordine")
-    .eq("tappa_id", tappaId);
-
-  const used = new Set(
-    (existing ?? []).map((r: { ordine: number }) => Number(r.ordine))
-  );
-  let ordine = 0;
-  for (let i = 0; i <= 2; i++) {
-    if (!used.has(i)) {
-      ordine = i;
-      break;
+  try {
+    const password = formData.get("adminPassword") as string;
+    if (!verifyAdmin(password)) {
+      return { error: "Password admin non valida." };
     }
+
+    const tappaId = (formData.get("tappaId") as string)?.trim();
+    if (!tappaId) return { error: "Tappa non specificata." };
+
+    let imageUrl = (formData.get("imageUrl") as string)?.trim();
+    const imageFile = formData.get("image") as File | null;
+    if (imageFile && imageFile.size > 0) {
+      const fd = new FormData();
+      fd.append("image", imageFile);
+      const up = await uploadGalleryImageFile(fd);
+      if (up.error) return { error: up.error };
+      if (up.url) imageUrl = up.url;
+    }
+    if (!imageUrl || !imageUrl.startsWith("http")) {
+      return { error: "Carica un'immagine o incolla un URL valido." };
+    }
+
+    const supabase = createServiceRoleClient();
+    const { data: existing, error: fetchErr } = await supabase
+      .from("gallery_tappa_images")
+      .select("ordine")
+      .eq("tappa_id", tappaId);
+
+    if (fetchErr) return { error: "Errore lettura gallery: " + fetchErr.message };
+
+    const used = new Set(
+      (existing ?? []).map((r: { ordine: number }) => Number(r.ordine))
+    );
+    let ordine = 0;
+    for (let i = 0; i <= 2; i++) {
+      if (!used.has(i)) {
+        ordine = i;
+        break;
+      }
+    }
+    if (used.size >= 3) return { error: "Questa tappa ha già 3 immagini. Rimuovine una per aggiungerne un'altra." };
+
+    const { error } = await supabase.from("gallery_tappa_images").insert({
+      tappa_id: tappaId,
+      image_url: imageUrl,
+      ordine,
+    });
+
+    if (error) {
+      if (error.code === "23505") return { error: "Slot già usato. Ricarica la pagina e riprova." };
+      return { error: "Errore inserimento: " + error.message };
+    }
+
+    revalidatePath("/gallery");
+    revalidatePath("/admin");
+    revalidatePath("/");
+    return { success: true };
+  } catch (e) {
+    console.error("addGalleryTappaImage:", e);
+    return { error: e instanceof Error ? e.message : "Errore imprevisto." };
   }
-  if (used.size >= 3) return { error: "Questa tappa ha già 3 immagini. Rimuovine una per aggiungerne un'altra." };
-
-  const { error } = await supabase.from("gallery_tappa_images").insert({
-    tappa_id: tappaId,
-    image_url: imageUrl,
-    ordine,
-  });
-
-  if (error) {
-    if (error.code === "23505") return { error: "Slot già usato. Ricarica la pagina e riprova." };
-    return { error: "Errore: " + error.message };
-  }
-
-  revalidatePath("/gallery");
-  revalidatePath("/");
-  return { success: true };
 }
 
 /** Remove a gallery tappa image by id. */
@@ -468,6 +475,7 @@ export async function removeGalleryTappaImage(formData: FormData) {
   if (error) return { error: "Errore: " + error.message };
 
   revalidatePath("/gallery");
+  revalidatePath("/admin");
   revalidatePath("/");
   return { success: true };
 }
