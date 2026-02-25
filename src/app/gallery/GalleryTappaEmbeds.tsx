@@ -6,38 +6,62 @@ import type { DbTappa } from "@/lib/types";
 
 const EMBED_SCRIPT_URL = "https://www.instagram.com/embed.js";
 
+function getInstagramEmbedIframeUrl(postUrl: string): string | null {
+  try {
+    const u = new URL(postUrl);
+    const match = u.pathname.match(/^\/(p|reel)\/([A-Za-z0-9_-]+)\/?$/);
+    if (!match) return null;
+    const [, type, id] = match;
+    return `https://www.instagram.com/${type}/${id}/embed/`;
+  } catch {
+    return null;
+  }
+}
+
 function InstagramPostEmbed({ url }: { url: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [html, setHtml] = useState<string | null>(null);
-  const [error, setError] = useState(false);
+  const [useFallbackIframe, setUseFallbackIframe] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     const params = new URLSearchParams({ url });
     fetch(`/api/instagram-oembed?${params.toString()}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("oEmbed failed");
-        return res.json();
-      })
-      .then((data: { html?: string }) => {
+      .then((res) => res.json())
+      .then((data: { html?: string; error?: string }) => {
         if (cancelled) return;
         if (data?.html) setHtml(data.html);
-        else setError(true);
+        else setUseFallbackIframe(true);
       })
       .catch(() => {
-        if (!cancelled) setError(true);
+        if (!cancelled) setUseFallbackIframe(true);
       });
     return () => { cancelled = true; };
   }, [url]);
 
   useProcessInstagramEmbeds(html);
 
-  if (error) {
+  const embedIframeUrl = useFallbackIframe ? getInstagramEmbedIframeUrl(url) : null;
+
+  if (useFallbackIframe && !embedIframeUrl) {
     return (
       <div className="flex items-center justify-center aspect-square max-w-[320px] w-full bg-surface rounded-xl border border-dashed border-border text-muted text-sm">
         <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
           Post non disponibile · Apri su Instagram
         </a>
+      </div>
+    );
+  }
+
+  if (embedIframeUrl) {
+    return (
+      <div className="aspect-square max-w-[320px] w-full rounded-xl border border-border overflow-hidden bg-surface">
+        <iframe
+          src={embedIframeUrl}
+          title="Instagram post"
+          className="w-full h-full min-h-[400px] border-0"
+          allow="encrypted-media"
+        />
       </div>
     );
   }
