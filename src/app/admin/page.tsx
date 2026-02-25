@@ -39,7 +39,7 @@ function NewsCaptionRow({ id, titolo, instagramCaption }: { id: string; titolo: 
 }
 
 interface AdminData {
-  tappe: { id: string; slug: string; nome: string; stato: string; logo_url: string | null; luogo: string; data: string }[];
+  tappe: { id: string; slug: string; nome: string; stato: string; logo_url: string | null; luogo: string; data: string; instagram: string | null }[];
   squadre: {
     id: string;
     nome: string;
