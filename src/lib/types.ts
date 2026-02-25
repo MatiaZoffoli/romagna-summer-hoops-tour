@@ -98,6 +98,14 @@ export interface DbMvp {
   created_at: string;
 }
 
+export interface DbGalleryPhoto {
+  id: string;
+  tappa_id: string;
+  instagram_post_url: string;
+  ordine: number;
+  created_at: string;
+}
+
 // ============================================
 // Frontend types (enriched for display)
 // ============================================

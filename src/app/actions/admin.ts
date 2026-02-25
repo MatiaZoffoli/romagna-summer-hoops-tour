@@ -320,6 +320,79 @@ export async function generateNewsForTappa(formData: FormData) {
   }
 }
 
+const INSTAGRAM_POST_URL_REGEX = /^https?:\/\/(www\.)?instagram\.com\/(p|reel)\/[A-Za-z0-9_-]+\/?/;
+
+/** Add an Instagram post URL to a tappa's gallery (max 5 per tappa). */
+export async function addGalleryPhoto(formData: FormData) {
+  const password = formData.get("adminPassword") as string;
+  if (!verifyAdmin(password)) {
+    return { error: "Password admin non valida." };
+  }
+
+  const tappaId = (formData.get("tappaId") as string)?.trim();
+  let url = (formData.get("instagramPostUrl") as string)?.trim() || "";
+  if (!tappaId || !url) {
+    return { error: "Tappa e URL del post Instagram sono obbligatori." };
+  }
+
+  if (!url.startsWith("http")) url = "https://" + url;
+  if (!INSTAGRAM_POST_URL_REGEX.test(url)) {
+    return { error: "URL non valido. Usa un link a un post o reel Instagram (es. https://www.instagram.com/p/...)." };
+  }
+
+  const supabase = createServiceRoleClient();
+
+  const { data: existing } = await supabase
+    .from("gallery_photos")
+    .select("ordine")
+    .eq("tappa_id", tappaId);
+
+  const used = new Set((existing ?? []).map((r) => r.ordine));
+  let ordine = 0;
+  for (let i = 0; i <= 4; i++) {
+    if (!used.has(i)) {
+      ordine = i;
+      break;
+    }
+  }
+  if (used.size >= 5) return { error: "Questa tappa ha già 5 foto in gallery. Rimuovine una per aggiungerne un'altra." };
+
+  const { error } = await supabase.from("gallery_photos").insert({
+    tappa_id: tappaId,
+    instagram_post_url: url,
+    ordine,
+  });
+
+  if (error) {
+    if (error.code === "23505") return { error: "Questo post è già stato aggiunto per questa tappa." };
+    return { error: "Errore: " + error.message };
+  }
+
+  revalidatePath("/gallery");
+  revalidatePath("/");
+  return { success: true };
+}
+
+/** Remove a gallery photo by id. */
+export async function removeGalleryPhoto(formData: FormData) {
+  const password = formData.get("adminPassword") as string;
+  if (!verifyAdmin(password)) {
+    return { error: "Password admin non valida." };
+  }
+
+  const id = (formData.get("galleryPhotoId") as string)?.trim();
+  if (!id) return { error: "Foto non specificata." };
+
+  const supabase = createServiceRoleClient();
+  const { error } = await supabase.from("gallery_photos").delete().eq("id", id);
+
+  if (error) return { error: "Errore: " + error.message };
+
+  revalidatePath("/gallery");
+  revalidatePath("/");
+  return { success: true };
+}
+
 /** Send a test email to the admin address to verify SES is working. */
 export async function sendTestEmail(password: string) {
   if (!verifyAdmin(password)) {
@@ -344,7 +417,7 @@ export async function getAdminData(password: string) {
 
   const mvpsRes = await supabase.from("mvps").select("*, tappe(nome, slug)").order("ordine").order("created_at", { ascending: false });
 
-  const [tappeRes, squadreRes, risultatiRes, newsRes, applicationsRes, teamApplicationsRes, teamChangeRequestsRes, socialBonusRequestsRes] = await Promise.all([
+  const [tappeRes, squadreRes, risultatiRes, newsRes, applicationsRes, teamApplicationsRes, teamChangeRequestsRes, socialBonusRequestsRes, galleryPhotosRes] = await Promise.all([
     supabase.from("tappe").select("*").order("created_at"),
     supabase.from("squadre").select("*, giocatori(*)").order("nome"),
     supabase.from("risultati").select("*, tappe(nome), squadre(nome)").order("created_at", { ascending: false }),
@@ -353,6 +426,7 @@ export async function getAdminData(password: string) {
     Promise.resolve(supabase.from("team_applications").select("*").order("created_at", { ascending: false })).catch(() => ({ data: [] })),
     Promise.resolve(supabase.from("team_change_requests").select("*").order("created_at", { ascending: false })).catch(() => ({ data: [] })),
     supabase.from("social_bonus_requests").select("*, squadre(nome), tappe(nome, slug)").eq("stato", "pending").order("created_at", { ascending: false }),
+    Promise.resolve(supabase.from("gallery_photos").select("*").order("tappa_id").order("ordine", { ascending: true })).catch(() => ({ data: [] })),
   ]);
 
   return {
@@ -365,6 +439,7 @@ export async function getAdminData(password: string) {
     teamChangeRequests: (teamChangeRequestsRes as { data?: unknown[] }).data || [],
     socialBonusRequests: (socialBonusRequestsRes as { data?: unknown[]; error?: unknown }).error ? [] : ((socialBonusRequestsRes as { data: unknown[] }).data || []),
     mvps: mvpsRes.error ? [] : (mvpsRes.data || []),
+    galleryPhotos: (galleryPhotosRes as { data?: unknown[] }).data ?? [],
   };
 }
 

@@ -133,6 +133,22 @@ create table public.news (
 );
 
 -- ============================================
+-- GALLERY PHOTOS (up to 5 Instagram post URLs per tappa)
+-- ============================================
+create table if not exists public.gallery_photos (
+  id uuid default uuid_generate_v4() primary key,
+  tappa_id uuid references public.tappe(id) on delete cascade not null,
+  instagram_post_url text not null,
+  ordine integer not null default 0 check (ordine >= 0 and ordine <= 4),
+  created_at timestamp with time zone default now(),
+  unique(tappa_id, instagram_post_url)
+);
+create unique index if not exists gallery_photos_tappa_ordine_key on public.gallery_photos (tappa_id, ordine);
+create index if not exists gallery_photos_tappa_id on public.gallery_photos(tappa_id);
+alter table public.gallery_photos enable row level security;
+create policy "Gallery photos are viewable by everyone" on public.gallery_photos for select using (true);
+
+-- ============================================
 -- TAPPA APPLICATIONS (Organizer submissions)
 -- ============================================
 create table public.tappa_applications (

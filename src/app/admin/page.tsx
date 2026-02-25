@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Shield, Trophy, Plus, Newspaper, MapPin, Loader2, CheckCircle, Lock, FileText, X, Eye, Edit2, Copy, ImageIcon, Users, Share2, Award } from "lucide-react";
-import { addTappaResult, updateTappaStatus, addTappa, updateTappaLogo, addNews, getAdminData, approveTappaApplication, rejectTappaApplication, approveTeamApplication, rejectTeamApplication, createSquadraAdmin, updateSquadraAdmin, deleteRisultatoAdmin, approveTeamChangeRequest, rejectTeamChangeRequest, sendTestEmail, approveSocialBonusRequest, rejectSocialBonusRequest, createMvp, updateMvp, deleteMvp, generateNewsForTappa } from "@/app/actions/admin";
+import { Shield, Trophy, Plus, Newspaper, MapPin, Loader2, CheckCircle, Lock, FileText, X, Eye, Edit2, Copy, ImageIcon, Users, Share2, Award, Camera, Trash2 } from "lucide-react";
+import { addTappaResult, updateTappaStatus, addTappa, updateTappaLogo, addNews, getAdminData, approveTappaApplication, rejectTappaApplication, approveTeamApplication, rejectTeamApplication, createSquadraAdmin, updateSquadraAdmin, deleteRisultatoAdmin, approveTeamChangeRequest, rejectTeamChangeRequest, sendTestEmail, approveSocialBonusRequest, rejectSocialBonusRequest, createMvp, updateMvp, deleteMvp, generateNewsForTappa, addGalleryPhoto, removeGalleryPhoto } from "@/app/actions/admin";
 import { sistemaPunteggio } from "@/data/placeholder";
 import AckModal from "@/components/AckModal";
 import { AVATAR_ICON_OPTIONS, AVATAR_COLOR_OPTIONS } from "@/lib/avatar-presets";
@@ -107,6 +107,7 @@ interface AdminData {
     ordine: number;
     tappe: { nome: string; slug: string } | null;
   }[];
+  galleryPhotos: { id: string; tappa_id: string; instagram_post_url: string; ordine: number; created_at: string }[];
 }
 
 export default function AdminPage() {
@@ -116,7 +117,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<"risultati" | "tappe" | "news" | "stato" | "applicazioni" | "squadre" | "gestione-squadre" | "bonus-social" | "mvp">("risultati");
+  const [activeTab, setActiveTab] = useState<"risultati" | "tappe" | "news" | "stato" | "applicazioni" | "squadre" | "gestione-squadre" | "bonus-social" | "mvp" | "gallery">("risultati");
   const [previewApp, setPreviewApp] = useState<AdminData["applications"][0] | null>(null);
   const [editingApp, setEditingApp] = useState<AdminData["applications"][0] | null>(null);
   const [previewTeamApp, setPreviewTeamApp] = useState<AdminData["teamApplications"][0] | null>(null);
@@ -213,6 +214,37 @@ export default function AdminPage() {
     if (result.error) setError(result.error);
     else {
       showMessage("News generata e pubblicata per la tappa!");
+      await refreshData();
+    }
+    setLoading(false);
+  }
+
+  async function handleAddGalleryPhoto(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const formData = new FormData(e.currentTarget);
+    formData.set("adminPassword", password);
+    const result = await addGalleryPhoto(formData);
+    if (result.error) setError(result.error);
+    else {
+      showMessage("Foto aggiunta alla gallery!");
+      await refreshData();
+      (e.target as HTMLFormElement).reset();
+    }
+    setLoading(false);
+  }
+
+  async function handleRemoveGalleryPhoto(galleryPhotoId: string) {
+    setError("");
+    setLoading(true);
+    const formData = new FormData();
+    formData.set("adminPassword", password);
+    formData.set("galleryPhotoId", galleryPhotoId);
+    const result = await removeGalleryPhoto(formData);
+    if (result.error) setError(result.error);
+    else {
+      showMessage("Foto rimossa dalla gallery.");
       await refreshData();
     }
     setLoading(false);
@@ -614,6 +646,7 @@ export default function AdminPage() {
             { id: "stato" as const, label: "Stato Tappe", icon: MapPin },
             { id: "tappe" as const, label: "Nuova Tappa", icon: Plus },
             { id: "news" as const, label: "Nuova News", icon: Newspaper },
+            { id: "gallery" as const, label: "Gallery", icon: Camera },
             { id: "applicazioni" as const, label: `Tappe${data?.applications.filter(a => a.stato === 'pending').length ? ` (${data.applications.filter(a => a.stato === 'pending').length})` : ''}`, icon: FileText },
             { id: "squadre" as const, label: `Richieste squadre${data?.teamApplications.filter(t => t.stato === 'pending').length ? ` (${data.teamApplications.filter(t => t.stato === 'pending').length})` : ''}`, icon: Users },
             { id: "gestione-squadre" as const, label: "Gestione squadre", icon: Users },
@@ -958,6 +991,77 @@ export default function AdminPage() {
                   ))}
                 </ul>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== GALLERY (foto Instagram per tappa) ===== */}
+        {activeTab === "gallery" && (
+          <div className="p-8 bg-surface rounded-2xl border border-border">
+            <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider mb-2">
+              GALLERY – FOTO INSTAGRAM PER TAPPA
+            </h2>
+            <p className="text-sm text-muted mb-6">
+              Aggiungi fino a 5 post Instagram per ogni tappa. Inserisci l&apos;URL del post (es. https://www.instagram.com/p/ABC123/). Le foto appariranno nella pagina Gallery del sito.
+            </p>
+            <div className="space-y-8">
+              {data?.tappe.map((tappa) => {
+                const photos = (data?.galleryPhotos ?? []).filter((p) => p.tappa_id === tappa.id);
+                const canAdd = photos.length < 5;
+                return (
+                  <div key={tappa.id} className="p-6 bg-background rounded-xl border border-border">
+                    <div className="flex items-center justify-between gap-4 mb-4">
+                      <div>
+                        <h3 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider">{tappa.nome}</h3>
+                        <p className="text-xs text-muted">{tappa.luogo} {tappa.instagram ? `· ${tappa.instagram}` : ""}</p>
+                      </div>
+                      <span className="text-sm text-muted shrink-0">{photos.length}/5 foto</span>
+                    </div>
+                    {photos.length > 0 && (
+                      <ul className="space-y-2 mb-4">
+                        {photos.sort((a, b) => a.ordine - b.ordine).map((p) => (
+                          <li key={p.id} className="flex items-center justify-between gap-2 p-2 rounded-lg bg-surface border border-border">
+                            <a href={p.instagram_post_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary truncate flex-1 hover:underline">
+                              {p.instagram_post_url}
+                            </a>
+                            <button
+                              type="button"
+                              disabled={loading}
+                              onClick={() => handleRemoveGalleryPhoto(p.id)}
+                              className="p-1.5 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors disabled:opacity-50 shrink-0"
+                              title="Rimuovi"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {canAdd && (
+                      <form onSubmit={handleAddGalleryPhoto} className="flex flex-wrap items-end gap-3">
+                        <input type="hidden" name="tappaId" value={tappa.id} />
+                        <div className="flex-1 min-w-[200px]">
+                          <label className="block text-xs text-muted mb-1">URL post Instagram</label>
+                          <input
+                            name="instagramPostUrl"
+                            type="url"
+                            placeholder="https://www.instagram.com/p/..."
+                            className={inputClass}
+                            required
+                          />
+                        </div>
+                        <button type="submit" disabled={loading} className="px-4 py-2 bg-primary text-white text-sm font-semibold rounded-full hover:bg-primary-dark transition-colors flex items-center gap-2 disabled:opacity-50">
+                          {loading ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                          Aggiungi
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {(!data?.tappe || data.tappe.length === 0) && (
+              <p className="text-muted text-sm">Nessuna tappa. Aggiungi prima una tappa dalla tab Nuova Tappa.</p>
             )}
           </div>
         )}
