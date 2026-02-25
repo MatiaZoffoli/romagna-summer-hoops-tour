@@ -225,6 +225,13 @@ export default function AdminPage() {
     setLoading(true);
     const formData = new FormData(e.currentTarget);
     formData.set("adminPassword", password);
+    // If user pasted embed code, extract the post URL
+    let url = (formData.get("instagramPostUrl") as string)?.trim() ?? "";
+    const permalinkMatch = url.match(/data-instgrm-permalink=["']([^"']+)["']/);
+    if (permalinkMatch?.[1]) {
+      url = permalinkMatch[1].replace(/&amp;/g, "&").split("?")[0];
+      formData.set("instagramPostUrl", url);
+    }
     const result = await addGalleryPhoto(formData);
     if (result.error) setError(result.error);
     else {
@@ -1002,7 +1009,7 @@ export default function AdminPage() {
               GALLERY – FOTO INSTAGRAM PER TAPPA
             </h2>
             <p className="text-sm text-muted mb-6">
-              Aggiungi fino a 5 post Instagram per ogni tappa. Inserisci l&apos;URL del post (es. https://www.instagram.com/p/ABC123/). Le foto appariranno nella pagina Gallery del sito.
+              Aggiungi fino a 5 post Instagram per ogni tappa. Inserisci l&apos;URL del post (es. https://www.instagram.com/p/ABC123/) oppure incolla il codice embed di Instagram (blockquote). Le foto appariranno nella pagina Gallery con anteprima.
             </p>
             <div className="space-y-8">
               {data?.tappe.map((tappa) => {
@@ -1041,11 +1048,11 @@ export default function AdminPage() {
                       <form onSubmit={handleAddGalleryPhoto} className="flex flex-wrap items-end gap-3">
                         <input type="hidden" name="tappaId" value={tappa.id} />
                         <div className="flex-1 min-w-[200px]">
-                          <label className="block text-xs text-muted mb-1">URL post Instagram</label>
+                          <label className="block text-xs text-muted mb-1">URL post Instagram o codice embed</label>
                           <input
                             name="instagramPostUrl"
-                            type="url"
-                            placeholder="https://www.instagram.com/p/..."
+                            type="text"
+                            placeholder="https://www.instagram.com/p/... oppure incolla il codice embed"
                             className={inputClass}
                             required
                           />
