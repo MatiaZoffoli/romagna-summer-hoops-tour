@@ -262,16 +262,19 @@ export default function AdminPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const formData = new FormData(e.currentTarget);
-    formData.set("adminPassword", password);
-    const result = await addGalleryTappaImage(formData);
-    if (result.error) setError(result.error);
-    else {
-      showMessage("Immagine aggiunta alla gallery.");
-      await refreshData();
-      (e.target as HTMLFormElement).reset();
+    try {
+      const formData = new FormData(e.currentTarget);
+      formData.set("adminPassword", password);
+      const result = await addGalleryTappaImage(formData);
+      if (result.error) setError(result.error);
+      else {
+        showMessage("Immagine aggiunta alla gallery.");
+        await refreshData();
+        (e.target as HTMLFormElement).reset();
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function handleRemoveGalleryTappaImage(galleryTappaImageId: string) {

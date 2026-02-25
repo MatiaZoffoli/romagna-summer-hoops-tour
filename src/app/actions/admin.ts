@@ -424,7 +424,9 @@ export async function addGalleryTappaImage(formData: FormData) {
     .select("ordine")
     .eq("tappa_id", tappaId);
 
-  const used = new Set((existing ?? []).map((r: { ordine: number }) => r.ordine));
+  const used = new Set(
+    (existing ?? []).map((r: { ordine: number }) => Number(r.ordine))
+  );
   let ordine = 0;
   for (let i = 0; i <= 2; i++) {
     if (!used.has(i)) {
@@ -440,7 +442,10 @@ export async function addGalleryTappaImage(formData: FormData) {
     ordine,
   });
 
-  if (error) return { error: "Errore: " + error.message };
+  if (error) {
+    if (error.code === "23505") return { error: "Slot già usato. Ricarica la pagina e riprova." };
+    return { error: "Errore: " + error.message };
+  }
 
   revalidatePath("/gallery");
   revalidatePath("/");
