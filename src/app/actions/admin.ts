@@ -191,6 +191,36 @@ export async function addTappa(formData: FormData) {
     return { error: "Errore: " + error.message };
   }
 
+  // Auto-generate a news article for the new tappa (non-blocking)
+  try {
+    const generated = await generateNewsFromEvent("tappa_approved", {
+      nomeTappa: nome,
+      nomeCompleto: nomeCompleto || null,
+      luogo,
+      data,
+      organizzatore: organizzatore || null,
+    });
+    if (generated) {
+      const dataNews = new Date().toLocaleDateString("it-IT", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+      await supabase.from("news").insert({
+        titolo: generated.titolo,
+        contenuto: generated.contenuto,
+        anteprima: generated.anteprima,
+        data: dataNews,
+        image_url: null,
+        instagram_caption: null,
+      });
+      revalidatePath("/news");
+      revalidatePath("/");
+    }
+  } catch (newsError) {
+    console.error("Failed to generate or insert auto-news for tappa:", newsError);
+  }
+
   revalidatePath("/tappe");
   revalidatePath("/tappe/mappa");
   revalidatePath("/");
@@ -224,6 +254,70 @@ export async function updateTappaLogo(formData: FormData) {
   revalidatePath("/tappe/mappa");
   revalidatePath("/admin");
   return { success: true };
+}
+
+/** Generate and insert a news article for an existing tappa (e.g. one added manually without auto-news). */
+export async function generateNewsForTappa(formData: FormData) {
+  const password = formData.get("adminPassword") as string;
+  if (!verifyAdmin(password)) {
+    return { error: "Password admin non valida." };
+  }
+
+  const tappaId = formData.get("tappaId") as string;
+  if (!tappaId) {
+    return { error: "Tappa non specificata." };
+  }
+
+  const supabase = createServiceRoleClient();
+  const { data: tappa, error: fetchError } = await supabase
+    .from("tappe")
+    .select("id, nome, nome_completo, luogo, data, organizzatore")
+    .eq("id", tappaId)
+    .single();
+
+  if (fetchError || !tappa) {
+    return { error: "Tappa non trovata." };
+  }
+
+  try {
+    const generated = await generateNewsFromEvent("tappa_approved", {
+      nomeTappa: tappa.nome,
+      nomeCompleto: tappa.nome_completo ?? null,
+      luogo: tappa.luogo,
+      data: tappa.data,
+      organizzatore: tappa.organizzatore ?? null,
+    });
+
+    if (!generated) {
+      return { error: "Impossibile generare la news (controlla OPENAI_API_KEY)." };
+    }
+
+    const dataNews = new Date().toLocaleDateString("it-IT", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+    const { error: insertError } = await supabase.from("news").insert({
+      titolo: generated.titolo,
+      contenuto: generated.contenuto,
+      anteprima: generated.anteprima,
+      data: dataNews,
+      image_url: null,
+      instagram_caption: null,
+    });
+
+    if (insertError) {
+      return { error: "Errore inserimento news: " + insertError.message };
+    }
+
+    revalidatePath("/news");
+    revalidatePath("/");
+    return { success: true };
+  } catch (err) {
+    console.error("generateNewsForTappa:", err);
+    return { error: err instanceof Error ? err.message : "Errore durante la generazione della news." };
+  }
 }
 
 /** Send a test email to the admin address to verify SES is working. */

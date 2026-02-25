@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { Shield, Trophy, Plus, Newspaper, MapPin, Loader2, CheckCircle, Lock, FileText, X, Eye, Edit2, Copy, ImageIcon, Users, Share2, Award } from "lucide-react";
-import { addTappaResult, updateTappaStatus, addTappa, updateTappaLogo, addNews, getAdminData, approveTappaApplication, rejectTappaApplication, approveTeamApplication, rejectTeamApplication, createSquadraAdmin, updateSquadraAdmin, deleteRisultatoAdmin, approveTeamChangeRequest, rejectTeamChangeRequest, sendTestEmail, approveSocialBonusRequest, rejectSocialBonusRequest, createMvp, updateMvp, deleteMvp } from "@/app/actions/admin";
+import { addTappaResult, updateTappaStatus, addTappa, updateTappaLogo, addNews, getAdminData, approveTappaApplication, rejectTappaApplication, approveTeamApplication, rejectTeamApplication, createSquadraAdmin, updateSquadraAdmin, deleteRisultatoAdmin, approveTeamChangeRequest, rejectTeamChangeRequest, sendTestEmail, approveSocialBonusRequest, rejectSocialBonusRequest, createMvp, updateMvp, deleteMvp, generateNewsForTappa } from "@/app/actions/admin";
 import { sistemaPunteggio } from "@/data/placeholder";
 import AckModal from "@/components/AckModal";
 import { AVATAR_ICON_OPTIONS, AVATAR_COLOR_OPTIONS } from "@/lib/avatar-presets";
@@ -199,6 +199,21 @@ export default function AdminPage() {
       showMessage("News pubblicata!");
       await refreshData();
       (e.target as HTMLFormElement).reset();
+    }
+    setLoading(false);
+  }
+
+  async function handleGenerateNewsForTappa(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const formData = new FormData(e.currentTarget);
+    formData.set("adminPassword", password);
+    const result = await generateNewsForTappa(formData);
+    if (result.error) setError(result.error);
+    else {
+      showMessage("News generata e pubblicata per la tappa!");
+      await refreshData();
     }
     setLoading(false);
   }
@@ -865,6 +880,35 @@ export default function AdminPage() {
             <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider mb-6">
               PUBBLICA NEWS
             </h2>
+
+            {/* Genera news per tappa esistente - in evidenza in cima */}
+            <div className="mb-10 pb-8 border-b border-border">
+              <h3 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider mb-2">
+                GENERA NEWS PER UNA TAPPA ESISTENTE
+              </h3>
+              <p className="text-sm text-muted mb-4">
+                Se hai aggiunto una tappa manualmente senza che venisse creata la news, seleziona la tappa e genera l&apos;articolo in automatico (richiede OPENAI_API_KEY).
+              </p>
+              <form onSubmit={handleGenerateNewsForTappa} className="flex flex-wrap items-end gap-4">
+                <div className="min-w-[200px]">
+                  <label className="block text-sm text-muted mb-2">Tappa</label>
+                  <select name="tappaId" required className={inputClass}>
+                    <option value="">Seleziona tappa...</option>
+                    {data?.tappe.map((t) => (
+                      <option key={t.id} value={t.id}>{t.nome} – {t.luogo} ({t.data})</option>
+                    ))}
+                  </select>
+                </div>
+                <button type="submit" disabled={loading || !data?.tappe?.length} className="px-5 py-2.5 bg-primary/90 text-white font-semibold rounded-full hover:bg-primary transition-colors flex items-center gap-2 disabled:opacity-50">
+                  {loading ? <Loader2 size={16} className="animate-spin" /> : <Newspaper size={16} />}
+                  Genera news per questa tappa
+                </button>
+              </form>
+            </div>
+
+            <h3 className="font-[family-name:var(--font-bebas)] text-lg tracking-wider mb-4 text-muted">
+              Oppure pubblica una news manuale
+            </h3>
             <form onSubmit={handleAddNews} className="space-y-4">
               <div>
                 <label className="block text-sm text-muted mb-2">Titolo *</label>
@@ -902,6 +946,7 @@ export default function AdminPage() {
                 Pubblica News
               </button>
             </form>
+
             {data?.news && data.news.length > 0 && (
               <div className="mt-8 pt-8 border-t border-border">
                 <h3 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider mb-4">
