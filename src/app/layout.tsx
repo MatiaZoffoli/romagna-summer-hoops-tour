@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import localFont from "next/font/local";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -69,6 +70,7 @@ export default async function RootLayout({
         <main className="min-h-screen">{children}</main>
         <Footer />
         <TappaPromoPopup tappa={prossimaTappaPromo} />
+        <SpeedInsights />
       </body>
     </html>
   );

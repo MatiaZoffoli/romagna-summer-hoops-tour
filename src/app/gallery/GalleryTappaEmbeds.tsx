@@ -6,9 +6,22 @@ import type { DbTappa } from "@/lib/types";
 
 const ASPECT_RATIO = 1; // 1:1
 
+function getEmbedIframeUrl(postUrl: string): string | null {
+  try {
+    const u = new URL(postUrl);
+    if (!/^(www\.)?instagram\.com$/i.test(u.hostname)) return null;
+    const m = u.pathname.match(/^\/(p|reel)\/([A-Za-z0-9_-]+)\/?$/);
+    if (!m) return null;
+    return `https://www.instagram.com/${m[1]}/${m[2]}/embed/`;
+  } catch {
+    return null;
+  }
+}
+
 function InstagramImageCard({ url }: { url: string }) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const embedUrl = getEmbedIframeUrl(url);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,6 +68,29 @@ function InstagramImageCard({ url }: { url: string }) {
   }, [url]);
 
   if (failed) {
+    if (embedUrl) {
+      return (
+        <div
+          className="relative w-full max-w-[400px] rounded-xl border border-border bg-surface overflow-hidden"
+          style={{ aspectRatio: String(ASPECT_RATIO) }}
+        >
+          <iframe
+            src={embedUrl}
+            title="Instagram post"
+            className="w-full h-full min-h-[400px] border-0 pointer-events-none select-none"
+            style={{ transform: "scale(0.5)", transformOrigin: "top left", width: "200%", height: "200%" }}
+          />
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="absolute inset-0 flex items-end justify-center pb-2 text-sm text-white/90 hover:text-white bg-gradient-to-t from-black/60 to-transparent pointer-events-auto"
+          >
+            Apri su Instagram
+          </a>
+        </div>
+      );
+    }
     return (
       <a
         href={url}
