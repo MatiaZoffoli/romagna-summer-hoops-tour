@@ -45,8 +45,8 @@ function InstagramPostEmbed({ url }: { url: string }) {
 
   if (useFallbackIframe && !embedIframeUrl) {
     return (
-      <div className="flex items-center justify-center aspect-square max-w-[320px] w-full bg-surface rounded-xl border border-dashed border-border text-muted text-sm">
-        <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+      <div className="flex items-center justify-center w-full max-w-[320px] min-h-[320px] bg-surface rounded-xl border border-dashed border-border text-muted text-sm p-4">
+        <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors text-center">
           Post non disponibile · Apri su Instagram
         </a>
       </div>
@@ -55,11 +55,11 @@ function InstagramPostEmbed({ url }: { url: string }) {
 
   if (embedIframeUrl) {
     return (
-      <div className="aspect-square max-w-[320px] w-full rounded-xl border border-border overflow-hidden bg-surface">
+      <div className="w-full max-w-[320px] rounded-xl border border-border overflow-hidden bg-surface">
         <iframe
           src={embedIframeUrl}
           title="Instagram post"
-          className="w-full h-full min-h-[400px] border-0"
+          className="w-full border-0 min-h-[400px]"
           allow="encrypted-media"
         />
       </div>
@@ -68,7 +68,7 @@ function InstagramPostEmbed({ url }: { url: string }) {
 
   if (!html) {
     return (
-      <div className="flex items-center justify-center aspect-square max-w-[320px] w-full bg-surface rounded-xl border border-border animate-pulse">
+      <div className="flex items-center justify-center w-full max-w-[320px] min-h-[320px] bg-surface rounded-xl border border-border animate-pulse">
         <span className="text-muted text-sm">Caricamento...</span>
       </div>
     );
@@ -77,7 +77,7 @@ function InstagramPostEmbed({ url }: { url: string }) {
   return (
     <div
       ref={containerRef}
-      className="instagram-embed-wrapper [&_.instagram-media]:max-w-full [&_.instagram-media]:min-w-0"
+      className="instagram-embed-wrapper w-full max-w-[320px] [&_.instagram-media]:max-w-full [&_.instagram-media]:min-w-0 [&_iframe]:max-w-full [&_iframe]:!min-h-[400px]"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
