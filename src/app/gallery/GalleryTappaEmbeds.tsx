@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { Instagram, ExternalLink } from "lucide-react";
 import type { DbTappa } from "@/lib/types";
 
-const OEMBED_URL = "https://api.instagram.com/oembed?url=";
 const EMBED_SCRIPT_URL = "https://www.instagram.com/embed.js";
 
 function InstagramPostEmbed({ url }: { url: string }) {
@@ -14,9 +13,12 @@ function InstagramPostEmbed({ url }: { url: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    const encoded = encodeURIComponent(url);
-    fetch(`${OEMBED_URL}${encoded}`)
-      .then((res) => res.json())
+    const params = new URLSearchParams({ url });
+    fetch(`/api/instagram-oembed?${params.toString()}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("oEmbed failed");
+        return res.json();
+      })
       .then((data: { html?: string }) => {
         if (cancelled) return;
         if (data?.html) setHtml(data.html);
@@ -27,6 +29,8 @@ function InstagramPostEmbed({ url }: { url: string }) {
       });
     return () => { cancelled = true; };
   }, [url]);
+
+  useProcessInstagramEmbeds(html);
 
   if (error) {
     return (
@@ -53,6 +57,18 @@ function InstagramPostEmbed({ url }: { url: string }) {
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
+}
+
+function useProcessInstagramEmbeds(html: string | null) {
+  useEffect(() => {
+    if (!html) return;
+    const t = setTimeout(() => {
+      if (typeof window !== "undefined" && (window as unknown as { instgrm?: { Embeds?: { process: () => void } } }).instgrm?.Embeds?.process) {
+        (window as unknown as { instgrm: { Embeds: { process: () => void } } }).instgrm.Embeds.process();
+      }
+    }, 100);
+    return () => clearTimeout(t);
+  }, [html]);
 }
 
 /** Load Instagram embed.js once so blockquotes become iframes */
