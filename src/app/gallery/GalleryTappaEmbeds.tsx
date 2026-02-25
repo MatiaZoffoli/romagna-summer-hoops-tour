@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Instagram, ExternalLink } from "lucide-react";
 import type { DbTappa } from "@/lib/types";
 
+const CARD_MAX_WIDTH = 480; // larger cards, photo-focused
 const ASPECT_RATIO = 1; // 1:1
 
 function getEmbedIframeUrl(postUrl: string): string | null {
@@ -70,25 +71,18 @@ function InstagramImageCard({ url }: { url: string }) {
   if (failed) {
     if (embedUrl) {
       return (
-        <div
-          className="relative w-full max-w-[400px] rounded-xl border border-border bg-surface overflow-hidden"
-          style={{ aspectRatio: String(ASPECT_RATIO) }}
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex flex-col items-center justify-center w-full rounded-xl border border-border bg-surface hover:bg-surface/90 transition-colors gap-3 p-6"
+          style={{ maxWidth: CARD_MAX_WIDTH, aspectRatio: String(ASPECT_RATIO) }}
         >
-          <iframe
-            src={embedUrl}
-            title="Instagram post"
-            className="w-full h-full min-h-[400px] border-0 pointer-events-none select-none"
-            style={{ transform: "scale(0.5)", transformOrigin: "top left", width: "200%", height: "200%" }}
-          />
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="absolute inset-0 flex items-end justify-center pb-2 text-sm text-white/90 hover:text-white bg-gradient-to-t from-black/60 to-transparent pointer-events-auto"
-          >
+          <Instagram className="text-muted-foreground" size={40} />
+          <span className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
             Apri su Instagram
-          </a>
-        </div>
+          </span>
+        </a>
       );
     }
     return (
@@ -96,8 +90,8 @@ function InstagramImageCard({ url }: { url: string }) {
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center justify-center w-full max-w-[400px] rounded-xl border border-dashed border-border bg-surface text-muted text-sm p-6 hover:text-primary transition-colors"
-        style={{ aspectRatio: String(ASPECT_RATIO) }}
+        className="flex items-center justify-center w-full rounded-xl border border-dashed border-border bg-surface text-muted text-sm p-6 hover:text-primary transition-colors"
+        style={{ maxWidth: CARD_MAX_WIDTH, aspectRatio: String(ASPECT_RATIO) }}
       >
         Post non disponibile · Apri su Instagram
       </a>
@@ -107,8 +101,8 @@ function InstagramImageCard({ url }: { url: string }) {
   if (!imageUrl) {
     return (
       <div
-        className="flex items-center justify-center w-full max-w-[400px] rounded-xl border border-border bg-surface animate-pulse"
-        style={{ aspectRatio: String(ASPECT_RATIO) }}
+        className="flex items-center justify-center w-full rounded-xl border border-border bg-surface animate-pulse"
+        style={{ maxWidth: CARD_MAX_WIDTH, aspectRatio: String(ASPECT_RATIO) }}
       >
         <span className="text-muted text-sm">Caricamento...</span>
       </div>
@@ -120,15 +114,15 @@ function InstagramImageCard({ url }: { url: string }) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="group block w-full max-w-[400px] rounded-xl border border-border overflow-hidden bg-surface focus:outline-none focus:ring-2 focus:ring-primary"
-      style={{ aspectRatio: String(ASPECT_RATIO) }}
+      className="group block w-full rounded-xl border border-border overflow-hidden bg-surface focus:outline-none focus:ring-2 focus:ring-primary"
+      style={{ maxWidth: CARD_MAX_WIDTH, aspectRatio: String(ASPECT_RATIO) }}
     >
       <div className="relative w-full h-full">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={imageUrl}
           alt=""
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover brightness-105 contrast-105"
         />
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
           <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/90 text-gray-900 text-sm font-medium">
@@ -174,7 +168,7 @@ export default function GalleryTappaEmbeds({ items }: { items: TappaWithPhotos[]
               )}
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
             {postUrls.map((url) => (
               <InstagramImageCard key={url} url={url} />
             ))}
