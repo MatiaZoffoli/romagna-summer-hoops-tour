@@ -1,12 +1,17 @@
 import Link from "next/link";
 import { Camera, Instagram, ExternalLink, Video, Image as ImageIcon } from "lucide-react";
-import { getTappe, getGalleryPhotos } from "@/lib/data";
+import { getTappe, getGalleryPhotos, getGalleryTappaImages } from "@/lib/data";
 import GalleryTappaEmbeds from "./GalleryTappaEmbeds";
+import GalleryTappaImages from "./GalleryTappaImages";
 
 export const revalidate = 60;
 
 export default async function GalleryPage() {
-  const [tappe, galleryPhotos] = await Promise.all([getTappe(), getGalleryPhotos()]);
+  const [tappe, galleryPhotos, galleryTappaImages] = await Promise.all([
+    getTappe(),
+    getGalleryPhotos(),
+    getGalleryTappaImages(),
+  ]);
 
   // Filter only tappe that have instagram links
   const tappeConInstagram = tappe.filter((t) => t.instagram);
@@ -21,6 +26,17 @@ export default async function GalleryPage() {
       return { tappa, postUrls: photos };
     })
     .filter((x) => x.postUrls.length > 0);
+
+  // Build list of tappe with uploaded images (max 3 per tappa, square display)
+  const tappeWithGalleryImages = tappe
+    .map((tappa) => {
+      const images = galleryTappaImages
+        .filter((p) => p.tappa_id === tappa.id)
+        .sort((a, b) => a.ordine - b.ordine)
+        .map((p) => p.image_url);
+      return { tappa, imageUrls: images };
+    })
+    .filter((x) => x.imageUrls.length > 0);
 
   return (
     <div className="pt-24 pb-20">
@@ -112,13 +128,26 @@ export default async function GalleryPage() {
           )}
         </div>
 
-        {/* Foto dalle tappe – embedded Instagram posts */}
-        {tappeWithGalleryPhotos.length > 0 && (
+        {/* Foto dalle tappe – uploaded images (square, center crop) */}
+        {tappeWithGalleryImages.length > 0 && (
           <div className="mb-12">
             <div className="flex items-center gap-3 mb-8">
               <div className="w-1 h-8 bg-pink-500/80 rounded-full" />
               <h2 className="font-[family-name:var(--font-bebas)] text-3xl tracking-wider">
                 FOTO DALLE TAPPE
+              </h2>
+            </div>
+            <GalleryTappaImages items={tappeWithGalleryImages} />
+          </div>
+        )}
+
+        {/* Foto dalle tappe – embedded Instagram posts (optional, if you still add post URLs) */}
+        {tappeWithGalleryPhotos.length > 0 && (
+          <div className="mb-12">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-1 h-8 bg-purple-500/80 rounded-full" />
+              <h2 className="font-[family-name:var(--font-bebas)] text-3xl tracking-wider">
+                POST INSTAGRAM
               </h2>
             </div>
             <GalleryTappaEmbeds items={tappeWithGalleryPhotos} />
@@ -165,8 +194,8 @@ export default async function GalleryPage() {
           </div>
         </div>
 
-        {/* Coming Soon notice – only when no embedded photos yet */}
-        {tappeWithGalleryPhotos.length === 0 && (
+        {/* Coming Soon notice – only when no gallery content yet */}
+        {tappeWithGalleryImages.length === 0 && tappeWithGalleryPhotos.length === 0 && (
           <div className="p-8 bg-surface/50 rounded-2xl border border-dashed border-border text-center">
             <Camera size={48} className="mx-auto mb-4 text-primary/30" />
             <h3 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider mb-2">

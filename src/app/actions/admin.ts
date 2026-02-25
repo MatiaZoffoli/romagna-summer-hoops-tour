@@ -3,6 +3,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { uploadTappaLogoFile } from "@/app/actions/tappa-logo";
+import { uploadGalleryImageFile } from "@/app/actions/gallery-image-upload";
 import { sendEmail, notifyOrganizerApproved, notifyOrganizerRejected, sendWelcomeToTeam, notifyTeamRejected, notifyTeamChangeRequestApproved, notifyTeamChangeRequestRejected } from "@/lib/email";
 import { generateNewsFromEvent } from "@/lib/news-llm";
 
@@ -393,6 +394,79 @@ export async function removeGalleryPhoto(formData: FormData) {
   return { success: true };
 }
 
+/** Add a gallery tappa image (uploaded URL). Max 3 per tappa. */
+export async function addGalleryTappaImage(formData: FormData) {
+  const password = formData.get("adminPassword") as string;
+  if (!verifyAdmin(password)) {
+    return { error: "Password admin non valida." };
+  }
+
+  const tappaId = (formData.get("tappaId") as string)?.trim();
+  if (!tappaId) return { error: "Tappa non specificata." };
+
+  let imageUrl = (formData.get("imageUrl") as string)?.trim();
+  const imageFile = formData.get("image") as File | null;
+  if (imageFile && imageFile.size > 0) {
+    const fd = new FormData();
+    fd.append("adminPassword", password);
+    fd.append("image", imageFile);
+    const up = await uploadGalleryImageFile(fd);
+    if (up.error) return { error: up.error };
+    if (up.url) imageUrl = up.url;
+  }
+  if (!imageUrl || !imageUrl.startsWith("http")) {
+    return { error: "Carica un'immagine o incolla un URL valido." };
+  }
+
+  const supabase = createServiceRoleClient();
+  const { data: existing } = await supabase
+    .from("gallery_tappa_images")
+    .select("ordine")
+    .eq("tappa_id", tappaId);
+
+  const used = new Set((existing ?? []).map((r: { ordine: number }) => r.ordine));
+  let ordine = 0;
+  for (let i = 0; i <= 2; i++) {
+    if (!used.has(i)) {
+      ordine = i;
+      break;
+    }
+  }
+  if (used.size >= 3) return { error: "Questa tappa ha già 3 immagini. Rimuovine una per aggiungerne un'altra." };
+
+  const { error } = await supabase.from("gallery_tappa_images").insert({
+    tappa_id: tappaId,
+    image_url: imageUrl,
+    ordine,
+  });
+
+  if (error) return { error: "Errore: " + error.message };
+
+  revalidatePath("/gallery");
+  revalidatePath("/");
+  return { success: true };
+}
+
+/** Remove a gallery tappa image by id. */
+export async function removeGalleryTappaImage(formData: FormData) {
+  const password = formData.get("adminPassword") as string;
+  if (!verifyAdmin(password)) {
+    return { error: "Password admin non valida." };
+  }
+
+  const id = (formData.get("galleryTappaImageId") as string)?.trim();
+  if (!id) return { error: "Immagine non specificata." };
+
+  const supabase = createServiceRoleClient();
+  const { error } = await supabase.from("gallery_tappa_images").delete().eq("id", id);
+
+  if (error) return { error: "Errore: " + error.message };
+
+  revalidatePath("/gallery");
+  revalidatePath("/");
+  return { success: true };
+}
+
 /** Send a test email to the admin address to verify SES is working. */
 export async function sendTestEmail(password: string) {
   if (!verifyAdmin(password)) {
@@ -417,7 +491,7 @@ export async function getAdminData(password: string) {
 
   const mvpsRes = await supabase.from("mvps").select("*, tappe(nome, slug)").order("ordine").order("created_at", { ascending: false });
 
-  const [tappeRes, squadreRes, risultatiRes, newsRes, applicationsRes, teamApplicationsRes, teamChangeRequestsRes, socialBonusRequestsRes, galleryPhotosRes] = await Promise.all([
+  const [tappeRes, squadreRes, risultatiRes, newsRes, applicationsRes, teamApplicationsRes, teamChangeRequestsRes, socialBonusRequestsRes, galleryPhotosRes, galleryTappaImagesRes] = await Promise.all([
     supabase.from("tappe").select("*").order("created_at"),
     supabase.from("squadre").select("*, giocatori(*)").order("nome"),
     supabase.from("risultati").select("*, tappe(nome), squadre(nome)").order("created_at", { ascending: false }),
@@ -427,6 +501,7 @@ export async function getAdminData(password: string) {
     Promise.resolve(supabase.from("team_change_requests").select("*").order("created_at", { ascending: false })).catch(() => ({ data: [] })),
     supabase.from("social_bonus_requests").select("*, squadre(nome), tappe(nome, slug)").eq("stato", "pending").order("created_at", { ascending: false }),
     Promise.resolve(supabase.from("gallery_photos").select("*").order("tappa_id").order("ordine", { ascending: true })).catch(() => ({ data: [] })),
+    Promise.resolve(supabase.from("gallery_tappa_images").select("*").order("tappa_id").order("ordine", { ascending: true })).catch(() => ({ data: [] })),
   ]);
 
   return {
@@ -440,6 +515,7 @@ export async function getAdminData(password: string) {
     socialBonusRequests: (socialBonusRequestsRes as { data?: unknown[]; error?: unknown }).error ? [] : ((socialBonusRequestsRes as { data: unknown[] }).data || []),
     mvps: mvpsRes.error ? [] : (mvpsRes.data || []),
     galleryPhotos: (galleryPhotosRes as { data?: unknown[] }).data ?? [],
+    galleryTappaImages: (galleryTappaImagesRes as { data?: unknown[] }).data ?? [],
   };
 }
 

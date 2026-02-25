@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { parseItalianDate } from "@/lib/date-utils";
-import type { DbTappa, DbSquadra, DbGiocatore, DbRisultato, DbNews, DbMvp, DbGalleryPhoto, SquadraConPunti, TappaConRisultati } from "@/lib/types";
+import type { DbTappa, DbSquadra, DbGiocatore, DbRisultato, DbNews, DbMvp, DbGalleryPhoto, DbGalleryTappaImage, SquadraConPunti, TappaConRisultati } from "@/lib/types";
 import { tappe as placeholderTappe, squadre as placeholderSquadre, news as placeholderNews, sistemaPunteggio as placeholderPunteggio, crew as placeholderCrew } from "@/data/placeholder";
 
 // Helper to check if Supabase is configured
@@ -336,6 +336,35 @@ export async function getGalleryPhotos(): Promise<DbGalleryPhoto[]> {
       tappa_id: String(row.tappa_id ?? ""),
       instagram_post_url: String(row.instagram_post_url ?? ""),
       ordine: Number(row.ordine) || 0,
+      created_at: String(row.created_at ?? new Date().toISOString()),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ============================================
+// GALLERY TAPPA IMAGES (uploaded, 3 per tappa)
+// ============================================
+
+export async function getGalleryTappaImages(): Promise<DbGalleryTappaImage[]> {
+  if (!isSupabaseConfigured()) return [];
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("gallery_tappa_images")
+      .select("*")
+      .order("tappa_id")
+      .order("ordine", { ascending: true });
+
+    if (error) return [];
+    const rows = (data ?? []) as Record<string, unknown>[];
+    return rows.map((row) => ({
+      id: String(row.id ?? ""),
+      tappa_id: String(row.tappa_id ?? ""),
+      image_url: String(row.image_url ?? ""),
+      ordine: Number(row.ordine) ?? 0,
       created_at: String(row.created_at ?? new Date().toISOString()),
     }));
   } catch {

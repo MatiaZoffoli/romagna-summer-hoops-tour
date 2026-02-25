@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { Shield, Trophy, Plus, Newspaper, MapPin, Loader2, CheckCircle, Lock, FileText, X, Eye, Edit2, Copy, ImageIcon, Users, Share2, Award, Camera, Trash2 } from "lucide-react";
-import { addTappaResult, updateTappaStatus, addTappa, updateTappaLogo, addNews, getAdminData, approveTappaApplication, rejectTappaApplication, approveTeamApplication, rejectTeamApplication, createSquadraAdmin, updateSquadraAdmin, deleteRisultatoAdmin, approveTeamChangeRequest, rejectTeamChangeRequest, sendTestEmail, approveSocialBonusRequest, rejectSocialBonusRequest, createMvp, updateMvp, deleteMvp, generateNewsForTappa, addGalleryPhoto, removeGalleryPhoto } from "@/app/actions/admin";
+import { addTappaResult, updateTappaStatus, addTappa, updateTappaLogo, addNews, getAdminData, approveTappaApplication, rejectTappaApplication, approveTeamApplication, rejectTeamApplication, createSquadraAdmin, updateSquadraAdmin, deleteRisultatoAdmin, approveTeamChangeRequest, rejectTeamChangeRequest, sendTestEmail, approveSocialBonusRequest, rejectSocialBonusRequest, createMvp, updateMvp, deleteMvp, generateNewsForTappa, addGalleryPhoto, removeGalleryPhoto, addGalleryTappaImage, removeGalleryTappaImage } from "@/app/actions/admin";
 import { sistemaPunteggio } from "@/data/placeholder";
 import AckModal from "@/components/AckModal";
 import { AVATAR_ICON_OPTIONS, AVATAR_COLOR_OPTIONS } from "@/lib/avatar-presets";
@@ -108,6 +108,7 @@ interface AdminData {
     tappe: { nome: string; slug: string } | null;
   }[];
   galleryPhotos: { id: string; tappa_id: string; instagram_post_url: string; ordine: number; created_at: string }[];
+  galleryTappaImages: { id: string; tappa_id: string; image_url: string; ordine: number; created_at: string }[];
 }
 
 export default function AdminPage() {
@@ -252,6 +253,37 @@ export default function AdminPage() {
     if (result.error) setError(result.error);
     else {
       showMessage("Foto rimossa dalla gallery.");
+      await refreshData();
+    }
+    setLoading(false);
+  }
+
+  async function handleAddGalleryTappaImage(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const formData = new FormData(e.currentTarget);
+    formData.set("adminPassword", password);
+    const result = await addGalleryTappaImage(formData);
+    if (result.error) setError(result.error);
+    else {
+      showMessage("Immagine aggiunta alla gallery.");
+      await refreshData();
+      (e.target as HTMLFormElement).reset();
+    }
+    setLoading(false);
+  }
+
+  async function handleRemoveGalleryTappaImage(galleryTappaImageId: string) {
+    setError("");
+    setLoading(true);
+    const formData = new FormData();
+    formData.set("adminPassword", password);
+    formData.set("galleryTappaImageId", galleryTappaImageId);
+    const result = await removeGalleryTappaImage(formData);
+    if (result.error) setError(result.error);
+    else {
+      showMessage("Immagine rimossa dalla gallery.");
       await refreshData();
     }
     setLoading(false);
@@ -1006,8 +1038,79 @@ export default function AdminPage() {
         {activeTab === "gallery" && (
           <div className="p-8 bg-surface rounded-2xl border border-border">
             <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-wider mb-2">
-              GALLERY – FOTO INSTAGRAM PER TAPPA
+              GALLERY – FOTO PER TAPPA
             </h2>
+
+            {/* Immagini caricate (max 3 per tappa) – mostrate come quadrati uniformi */}
+            <div className="mb-10">
+              <h3 className="font-[family-name:var(--font-bebas)] text-lg tracking-wider mb-2 text-primary">
+                IMMAGINI CARICATE (max 3 per tappa)
+              </h3>
+              <p className="text-sm text-muted mb-6">
+                Carica fino a 3 immagini per ogni tappa. Verranno mostrate nella pagina Gallery come quadrati uniformi (ritaglio al centro). Puoi caricare un file o incollare l&apos;URL di un&apos;immagine.
+              </p>
+              <div className="space-y-8">
+                {data?.tappe.map((tappa) => {
+                  const images = (data?.galleryTappaImages ?? []).filter((img) => img.tappa_id === tappa.id).sort((a, b) => a.ordine - b.ordine);
+                  const canAddImage = images.length < 3;
+                  return (
+                    <div key={tappa.id} className="p-6 bg-background rounded-xl border border-border">
+                      <div className="flex items-center justify-between gap-4 mb-4">
+                        <div>
+                          <h4 className="font-[family-name:var(--font-bebas)] text-xl tracking-wider">{tappa.nome}</h4>
+                          <p className="text-xs text-muted">{tappa.luogo}</p>
+                        </div>
+                        <span className="text-sm text-muted shrink-0">{images.length}/3 immagini</span>
+                      </div>
+                      {images.length > 0 && (
+                        <div className="flex flex-wrap gap-3 mb-4">
+                          {images.map((img) => (
+                            <div key={img.id} className="relative group">
+                              <img src={img.image_url} alt="" className="w-24 h-24 object-cover rounded-lg border border-border" />
+                              <button
+                                type="button"
+                                disabled={loading}
+                                onClick={() => handleRemoveGalleryTappaImage(img.id)}
+                                className="absolute -top-1 -right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+                                title="Rimuovi"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {canAddImage && (
+                        <form onSubmit={handleAddGalleryTappaImage} className="flex flex-wrap items-end gap-3">
+                          <input type="hidden" name="tappaId" value={tappa.id} />
+                          <div className="flex-1 min-w-[200px]">
+                            <label className="block text-xs text-muted mb-1">URL immagine (opzionale se carichi un file)</label>
+                            <input
+                              name="imageUrl"
+                              type="url"
+                              placeholder="https://..."
+                              className={inputClass}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-muted mb-1">Oppure carica file</label>
+                            <input name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="text-sm" />
+                          </div>
+                          <button type="submit" disabled={loading} className="px-4 py-2 bg-primary text-white text-sm font-semibold rounded-full hover:bg-primary-dark transition-colors flex items-center gap-2 disabled:opacity-50">
+                            {loading ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                            Aggiungi immagine
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <h3 className="font-[family-name:var(--font-bebas)] text-lg tracking-wider mb-2 text-muted">
+              POST INSTAGRAM (embed – opzionale)
+            </h3>
             <p className="text-sm text-muted mb-6">
               Aggiungi fino a 5 post Instagram per ogni tappa. Inserisci l&apos;URL del post (es. https://www.instagram.com/p/ABC123/) oppure incolla il codice embed di Instagram (blockquote). Le foto appariranno nella pagina Gallery con anteprima.
             </p>

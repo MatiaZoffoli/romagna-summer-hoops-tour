@@ -106,6 +106,14 @@ export interface DbGalleryPhoto {
   created_at: string;
 }
 
+export interface DbGalleryTappaImage {
+  id: string;
+  tappa_id: string;
+  image_url: string;
+  ordine: number;
+  created_at: string;
+}
+
 // ============================================
 // Frontend types (enriched for display)
 // ============================================
